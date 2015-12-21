@@ -235,7 +235,7 @@ AS
 
    */
    FUNCTION label_ordinates(
-      p_input           IN MDSYS.SDO_GEOMETRY
+      p_input           IN  MDSYS.SDO_GEOMETRY
    ) RETURN dz_sdotxt_labeled_list PIPELINED;
    
    -----------------------------------------------------------------------------
@@ -256,8 +256,37 @@ AS
 
    */
    FUNCTION label_measures(
-      p_input           IN MDSYS.SDO_GEOMETRY
+      p_input           IN  MDSYS.SDO_GEOMETRY
    ) RETURN dz_sdotxt_labeled_list PIPELINED;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   /*
+   Function: dz_sdotxt_main.break_2499
+
+   Utility to take a very long sdo text representation and add linefeeds to
+   meet the sqlplus 2499 character length restrictions.
+
+   Parameters:
+
+      p_input - CLOB of sdo object representation.
+      p_delim_character - delimiter to add to input, default is linefeed chr(10).
+      p_break_character - character upon which to add a delimiter, default is
+      comma.
+      p_break_point - character count near which to add delimiters, default is
+      sqlplus 2499 limit.
+      
+   Returns:
+
+      CLOB with breaking characters added after commas.
+
+   */
+   FUNCTION break_2499(
+       p_input           IN  CLOB
+      ,p_delim_character IN  VARCHAR2 DEFAULT CHR(10)
+      ,p_break_character IN  VARCHAR2 DEFAULT ','
+      ,p_break_point     IN  NUMBER DEFAULT 2499
+   ) RETURN CLOB;
 
 END dz_sdotxt_main;
 /
