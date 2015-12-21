@@ -818,6 +818,130 @@ AS
       
    END label_measures;
    
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION break_2499(
+       p_input           IN  CLOB
+      ,p_delim_character IN  VARCHAR2 DEFAULT CHR(10)
+      ,p_break_character IN  VARCHAR2 DEFAULT ','
+      ,p_break_point     IN  NUMBER DEFAULT 2499
+   ) RETURN CLOB
+   AS
+      str_delim_character VARCHAR2(4000 Char) := p_delim_character;
+      str_break_character VARCHAR2(4000 Char) := p_break_character;
+      int_breaker_length  PLS_INTEGER;
+      num_break_point     NUMBER := p_break_point;
+      int_length          PLS_INTEGER;
+      int_position        PLS_INTEGER;
+      int_stopper         PLS_INTEGER;
+      int_sanity          PLS_INTEGER;
+      clb_output          CLOB := '';
+      clb_tmp             CLOB;
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF str_delim_character IS NULL
+      THEN
+         str_delim_character := CHR(10);
+         
+      END IF;
+      
+      IF str_break_character IS NULL
+      THEN
+         str_break_character := ',';
+         
+      END IF;
+      int_breaker_length := LENGTH(str_break_character);
+      
+      IF num_break_point IS NULL
+      THEN
+         num_break_point := 2499;
+         
+      END IF;
+      num_break_point := num_break_point - int_breaker_length;
+      
+      IF p_input IS NULL
+      THEN
+         RETURN p_input;
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Determine length and exit if less than break point
+      --------------------------------------------------------------------------
+      int_length := LENGTH(p_input);
+      
+      IF int_length <= num_break_point
+      THEN
+         RETURN p_input;
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Loop through the text add linefeeds near but less than the break mark
+      --------------------------------------------------------------------------
+      int_position := 1;
+      int_sanity := 1;
+      
+      <<looper>>
+      WHILE int_position <= int_length
+      LOOP
+         clb_tmp := SUBSTR(
+             p_input
+            ,int_position
+            ,num_break_point
+         );
+         
+         IF LENGTH(clb_tmp) < num_break_point
+         THEN
+            clb_output := clb_output || clb_tmp;
+            int_position := int_length + 1;
+            EXIT looper;
+            
+         END IF;         
+
+         int_stopper := INSTR(clb_tmp,str_break_character,-1);
+         IF  int_stopper = 0
+         THEN
+            RAISE_APPLICATION_ERROR(
+                -20001
+               ,'cannot break using parameters provided'
+            );
+            
+         ELSE
+            clb_output := clb_output 
+                       || SUBSTR(clb_tmp,1,int_stopper + (int_breaker_length - 1)) 
+                       || str_delim_character;
+            
+            int_position := int_position 
+                         + int_stopper 
+                         + (int_breaker_length - 1);
+         
+         END IF;
+         
+         int_sanity := int_sanity + 1;
+         IF int_sanity > 100
+         THEN
+            RAISE_APPLICATION_ERROR(-20001,'sanity check');
+            
+         END IF;
+         
+      END LOOP;
+
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Return what we got
+      --------------------------------------------------------------------------
+      RETURN clb_output;
+   
+   END break_2499;
+   
 END dz_sdotxt_main;
 /
 
