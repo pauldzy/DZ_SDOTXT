@@ -39,8 +39,18 @@ AS
    Notes:
    
    - Input objects include MDSYS.SDO_GEOMETRY, MDSYS.SDO_GEOMETRY_ARRAY,
-     MDSYS.SDO_POINT_TYPE, MDSYS.SDO_ELEM_INFO_ARRAY, MDSYS.SDO_ORDINATE_ARRAY
-     and MDSYS.SDO_DIM_ARRAY.
+     MDSYS.SDO_POINT_TYPE, MDSYS.SDO_ELEM_INFO_ARRAY, MDSYS.SDO_ORDINATE_ARRAY,
+     MDSYS.SDO_GEORASTER, MDSYS.SDO_RASTER and MDSYS.SDO_DIM_ARRAY.
+     
+   - Note that Oracle is not PostgreSQL or other database systems where large
+     objects can be comfortably dumped to text.  Attempting to dump a 300,000 
+     vertice geometry is going to fail, attempting to dump a 70 gig raster rdt 
+     table is going to fail, attempting to feed more than a few meg
+     of generated text data back through sqlplus is also going to fail.  These 
+     utilities are provided for very modest purposes primarily to inspect the  
+     details of small example spatial objects or package up one or two smaller 
+     sized objects for transport to a collaborator.  In all situations the use
+     of Oracle datapump to import and export spatial data is the way to go.
 
    */
    FUNCTION sdo2sql(
@@ -77,6 +87,16 @@ AS
       ,p_pretty_print     IN  NUMBER   DEFAULT 0
    ) RETURN CLOB;
    
+   FUNCTION sdo2sql(
+       p_input            IN  MDSYS.SDO_GEORASTER
+      ,p_pretty_print     IN  NUMBER   DEFAULT 0
+   ) RETURN CLOB;
+   
+   FUNCTION sdo2sql(
+       p_input            IN  MDSYS.SDO_RASTER
+      ,p_pretty_print     IN  NUMBER DEFAULT 0
+   ) RETURN CLOB;
+   
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    /*
@@ -106,6 +126,57 @@ AS
       ,p_2d_flag          IN  VARCHAR2 DEFAULT 'FALSE'
       ,p_output_srid      IN  NUMBER   DEFAULT NULL
       ,p_pretty_print     IN  NUMBER   DEFAULT 0
+   ) RETURN CLOB;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   /*
+   Function: dz_sdotxt_main.blob2sql
+
+   Utility to convert a blob in textual hex usuable as a right side assignment
+   in SQL or PLSQL.  In order to use the results in SQL this is greatly limited 
+   to 4000 characters and in PLSQL to 32676 characters which when dumping a 
+   BLOB is pretty limiting.  Use blob2plsql for a more scaleable work-around.
+
+   Parameters:
+
+      p_input - BLOB to convert to sql text.
+      
+   Returns:
+
+      CLOB result.
+
+   */
+   FUNCTION blob2sql(
+       p_input        IN  BLOB
+   ) RETURN CLOB;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   /*
+   Function: dz_sdotxt_main.blob2plsql
+
+   Utility to convert a blob in textual hex usuable as a series of DBMS_LOB
+   statements which can be then used as a bind variable in sql statememts.
+
+   Parameters:
+
+      p_input - BLOB to convert to sql text.
+      p_lob_name - the lob variable name in the statements, default is dz_lob.
+      Use different names if you are dumping multiple blobs.
+      p_delim_value - the delimiter to place at the end of each statement, the 
+      default is a line feed to make sqplus happy.  Set to NULL if you want no
+      linefeeds.
+      
+   Returns:
+
+      CLOB result.
+
+   */
+   FUNCTION blob2plsql(
+       p_input        IN  BLOB
+      ,p_lob_name     IN  VARCHAR2 DEFAULT 'dz_lob'
+      ,p_delim_value  IN  VARCHAR2 DEFAULT CHR(10)
    ) RETURN CLOB;
    
    -----------------------------------------------------------------------------

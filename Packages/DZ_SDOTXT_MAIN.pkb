@@ -3,6 +3,94 @@ AS
 
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
+   FUNCTION dzq(
+      p_input      IN  VARCHAR2
+   ) RETURN VARCHAR2
+   AS
+   BEGIN
+      IF p_input IS NULL
+      THEN
+         RETURN 'NULL';
+      
+      ELSE
+         RETURN '''' || p_input || '''';
+         
+      END IF;
+      
+   END dzq;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION dzq(
+       p_input        IN  MDSYS.SDO_GEOMETRY
+      ,p_pretty_print IN  NUMBER DEFAULT 0
+   ) RETURN CLOB
+   AS
+   BEGIN
+      IF p_input IS NULL
+      THEN
+         RETURN 'NULL';
+      
+      ELSE
+         RETURN sdo2sql(
+             p_input        => p_input
+            ,p_pretty_print => p_pretty_print
+         );
+         
+      END IF;
+      
+   END dzq;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION dzq(
+       p_input        IN  SYS.XMLTYPE
+      ,p_pretty_print IN  NUMBER DEFAULT 0
+   ) RETURN CLOB
+   AS
+      clb_tmp CLOB;
+      
+   BEGIN
+      IF p_input IS NULL
+      THEN
+         RETURN 'NULL';
+      
+      ELSE
+         SELECT 
+         XMLSERIALIZE(CONTENT p_input NO INDENT)
+         INTO clb_tmp
+         FROM 
+         dual;
+         
+         RETURN 'SYS.XMLTYPE(''' || clb_tmp || ''')';
+         
+      END IF;
+      
+   END dzq;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION dzq(
+       p_input        IN  BLOB
+      ,p_pretty_print IN  NUMBER DEFAULT 0
+   ) RETURN CLOB
+   AS
+      
+      
+   BEGIN
+      IF p_input IS NULL
+      THEN
+         RETURN 'NULL';
+      
+      ELSE
+         RETURN blob2sql(p_input);
+         
+      END IF;
+      
+   END dzq;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
    FUNCTION sdo2sql(
        p_input        IN  MDSYS.SDO_GEOMETRY
       ,p_2d_flag      IN  VARCHAR2 DEFAULT 'FALSE'
@@ -71,13 +159,30 @@ AS
       -- Step 50
       -- Cough out the results
       --------------------------------------------------------------------------   
-      RETURN dz_sdotxt_util.pretty('MDSYS.SDO_GEOMETRY(',p_pretty_print)
-         || dz_sdotxt_util.pretty(TO_CHAR(p_input.SDO_GTYPE) || ',',p_pretty_print + 1)
-         || dz_sdotxt_util.pretty(str_srid || ',',p_pretty_print + 1)
-         || dz_sdotxt_util.pretty(sdo2sql(p_input.SDO_POINT,p_pretty_print + 1) || ',',p_pretty_print)
-         || dz_sdotxt_util.pretty(sdo2sql(p_input.SDO_ELEM_INFO,p_pretty_print + 1) || ',',p_pretty_print)
-         || dz_sdotxt_util.pretty(sdo2sql(p_input.SDO_ORDINATES,p_pretty_print + 1),p_pretty_print)
-         || dz_sdotxt_util.pretty(')',p_pretty_print,NULL,NULL);
+      RETURN dz_sdotxt_util.pretty(
+          'MDSYS.SDO_GEOMETRY('
+         ,p_pretty_print
+      ) || dz_sdotxt_util.pretty(
+          TO_CHAR(p_input.SDO_GTYPE) || ','
+         ,p_pretty_print + 1
+      ) || dz_sdotxt_util.pretty(
+          str_srid || ','
+         ,p_pretty_print + 1
+      ) || dz_sdotxt_util.pretty(
+          sdo2sql(p_input.SDO_POINT,p_pretty_print) || ','
+         ,p_pretty_print
+      ) || dz_sdotxt_util.pretty(
+          sdo2sql(p_input.SDO_ELEM_INFO,p_pretty_print) || ','
+         ,p_pretty_print
+      ) || dz_sdotxt_util.pretty(
+          sdo2sql(p_input.SDO_ORDINATES,p_pretty_print)
+         ,p_pretty_print
+      ) || dz_sdotxt_util.pretty(
+          ')'
+         ,p_pretty_print
+         ,NULL
+         ,NULL
+      );
 
    END sdo2sql;
    
@@ -119,7 +224,7 @@ AS
 
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
-   FUNCTION sdo2sql (
+   FUNCTION sdo2sql(
        p_input        IN MDSYS.SDO_POINT_TYPE
       ,p_pretty_print IN NUMBER   DEFAULT 0
    ) RETURN CLOB
@@ -178,7 +283,7 @@ AS
    
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
-   FUNCTION sdo2sql (
+   FUNCTION sdo2sql(
        p_input        IN MDSYS.SDO_ELEM_INFO_ARRAY
       ,p_pretty_print IN NUMBER   DEFAULT 0
    ) RETURN CLOB
@@ -209,13 +314,13 @@ AS
          THEN
             clb_output := clb_output || dz_sdotxt_util.pretty(
                 TO_CHAR(p_input(i)) || ','
-               ,p_pretty_print + 1
+               ,p_pretty_print + 2
             );
             
          ELSE
             clb_output := clb_output || dz_sdotxt_util.pretty(
                 TO_CHAR(p_input(i))
-               ,p_pretty_print + 1
+               ,p_pretty_print + 2
             );
             
          END IF;
@@ -224,7 +329,7 @@ AS
 
       RETURN clb_output || dz_sdotxt_util.pretty(
           ')'
-         ,p_pretty_print
+         ,p_pretty_print + 1
          ,NULL
          ,NULL
       );
@@ -233,7 +338,7 @@ AS
 
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
-   FUNCTION sdo2sql (
+   FUNCTION sdo2sql(
        p_input        IN  MDSYS.SDO_ORDINATE_ARRAY
       ,p_pretty_print IN  NUMBER DEFAULT 0
    ) RETURN CLOB
@@ -264,13 +369,13 @@ AS
          THEN
             clb_output := clb_output || dz_sdotxt_util.pretty(
                 TO_CHAR(p_input(i)) || ','
-               ,p_pretty_print + 1
+               ,p_pretty_print + 2
             );
             
          ELSE
             clb_output := clb_output || dz_sdotxt_util.pretty(
                 TO_CHAR(p_input(i))
-               ,p_pretty_print + 1
+               ,p_pretty_print + 2
             );
             
          END IF;
@@ -279,7 +384,7 @@ AS
       
       RETURN clb_output || dz_sdotxt_util.pretty(
           ')'
-         ,p_pretty_print
+         ,p_pretty_print + 1
          ,NULL
          ,NULL
       );
@@ -288,7 +393,7 @@ AS
 
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
-   FUNCTION sdo2sql (
+   FUNCTION sdo2sql(
       p_input        IN MDSYS.SDO_DIM_ARRAY,
       p_pretty_print IN NUMBER DEFAULT 0
    ) RETURN CLOB
@@ -346,6 +451,157 @@ AS
    
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
+   FUNCTION sdo2sql(
+       p_input        IN  MDSYS.SDO_GEORASTER
+      ,p_pretty_print IN  NUMBER DEFAULT 0
+   ) RETURN CLOB
+   AS
+      clb_output CLOB := '';
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF p_input IS NULL
+      THEN
+         RETURN dz_sdotxt_util.pretty(
+             'NULL'
+            ,p_pretty_print
+            ,NULL
+            ,NULL
+         );
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Create the outer object
+      --------------------------------------------------------------------------
+      clb_output := dz_sdotxt_util.pretty(
+          'MDSYS.SDO_GEORASTER('
+         ,p_pretty_print
+      );
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Add the attributes
+      --------------------------------------------------------------------------
+      clb_output := clb_output || dz_sdotxt_util.pretty(
+          TO_CHAR(p_input.rasterType) || ','
+         ,p_pretty_print + 1
+      ) || dz_sdotxt_util.pretty(
+          dzq(
+              p_input.spatialExtent
+             ,p_pretty_print + 1
+          ) || ','
+         ,p_pretty_print 
+      ) || dz_sdotxt_util.pretty(
+          dzq(p_input.rasterDataTable) || ','
+         ,p_pretty_print + 1
+      ) || dz_sdotxt_util.pretty(
+          TO_CHAR(p_input.rasterID) || ','
+         ,p_pretty_print + 1
+      ) || dz_sdotxt_util.pretty(
+          dzq(p_input.metadata)
+         ,p_pretty_print + 1
+      );
+      
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Return the results with closing parenthesis
+      --------------------------------------------------------------------------
+      RETURN clb_output || dz_sdotxt_util.pretty(
+          ')'
+         ,p_pretty_print
+         ,NULL
+         ,NULL
+      );
+
+   END sdo2sql;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   -- Note this function is not going to work well for large rasters
+   FUNCTION sdo2sql(
+       p_input        IN  MDSYS.SDO_RASTER
+      ,p_pretty_print IN  NUMBER DEFAULT 0
+   ) RETURN CLOB
+   AS
+      clb_output CLOB := '';
+      
+   BEGIN
+      
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF p_input IS NULL
+      THEN
+         RETURN dz_sdotxt_util.pretty(
+             'NULL'
+            ,p_pretty_print
+            ,NULL
+            ,NULL
+         );
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Create the outer object
+      --------------------------------------------------------------------------
+      clb_output := dz_sdotxt_util.pretty(
+          'MDSYS.SDO_RASTER('
+         ,p_pretty_print
+      );
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Add the attributes
+      --------------------------------------------------------------------------
+      clb_output := clb_output || dz_sdotxt_util.pretty(
+          TO_CHAR(p_input.rasterID) || ','
+         ,p_pretty_print + 1
+      ) || dz_sdotxt_util.pretty(
+          TO_CHAR(p_input.pyramidLevel) || ','
+         ,p_pretty_print + 1
+      ) || dz_sdotxt_util.pretty(
+          TO_CHAR(p_input.bandBlockNumber) || ','
+         ,p_pretty_print + 1
+      ) || dz_sdotxt_util.pretty(
+          TO_CHAR(p_input.rowBlockNumber) || ','
+         ,p_pretty_print + 1
+      ) || dz_sdotxt_util.pretty(
+          TO_CHAR(p_input.columnBlockNumber) || ','
+         ,p_pretty_print + 1
+      ) || dz_sdotxt_util.pretty(
+          dzq(
+              p_input.blockMBR
+             ,p_pretty_print + 1
+          ) || ','
+         ,p_pretty_print 
+      ) || dz_sdotxt_util.pretty(
+          dzq(p_input.rasterBlock)
+         ,p_pretty_print + 1
+      );
+      
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Return the results with closing parenthesis
+      --------------------------------------------------------------------------
+      RETURN clb_output || dz_sdotxt_util.pretty(
+          ')'
+         ,p_pretty_print
+         ,NULL
+         ,NULL
+      );
+      
+   END sdo2sql;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
    FUNCTION sdo2sql_nvl(
        p_input            IN  MDSYS.SDO_GEOMETRY
       ,p_is_null          IN  CLOB
@@ -371,6 +627,128 @@ AS
       END IF;
          
    END sdo2sql_nvl;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION blob2sql(
+       p_input        IN  BLOB
+   ) RETURN CLOB
+   AS
+      clb_tmp    CLOB := '';
+      int_size   PLS_INTEGER;
+      int_buffer PLS_INTEGER := 1000;
+      int_loop   PLS_INTEGER;
+      raw_buffer RAW(32767);
+      
+   BEGIN
+   
+      IF p_input IS NULL
+      THEN
+         RETURN clb_tmp;
+      
+      END IF;
+      
+      int_size := DBMS_LOB.GETLENGTH(p_input);
+      int_loop := int_size / int_buffer;
+      
+      FOR i IN 0 .. int_loop
+      LOOP
+         raw_buffer := DBMS_LOB.SUBSTR(
+             p_input
+            ,int_buffer
+            ,i * int_buffer + 1
+         );
+         
+         IF i > 0
+         THEN
+            clb_tmp := clb_tmp || ' || ';
+         
+         END IF;
+         
+         clb_tmp := clb_tmp || 'HEXTORAW(''' || RAWTOHEX(raw_buffer) || ''')';
+         
+      END LOOP;
+      
+      RETURN clb_tmp;
+      
+   END blob2sql;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION blob2plsql(
+       p_input        IN  BLOB
+      ,p_lob_name     IN  VARCHAR2 DEFAULT 'dz_lob'
+      ,p_delim_value  IN  VARCHAR2 DEFAULT CHR(10)
+   ) RETURN CLOB
+   AS
+      str_lob_name    VARCHAR2(4000 Char) := p_lob_name;
+      str_delim_value VARCHAR2(4000 Char) := p_delim_value;
+      clb_tmp         CLOB := '';
+      int_size        PLS_INTEGER;
+      int_buffer      PLS_INTEGER := 1000;
+      int_loop        PLS_INTEGER;
+      raw_buffer      RAW(32767);
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF p_input IS NULL
+      THEN
+         RETURN clb_tmp;
+      
+      END IF;
+      
+      IF str_lob_name IS NULL
+      THEN
+         str_lob_name := 'dz_lob';
+         
+      END IF;
+      
+      IF str_delim_value IS NULL
+      THEN
+         str_delim_value := CHR(10);
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Write the initial temp creation
+      --------------------------------------------------------------------------
+      clb_tmp := 'DBMS_LOB.CREATETEMPORARY(' || str_lob_name || ',TRUE);' || str_delim_value;
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      --  Loop through loop and write append statements
+      --------------------------------------------------------------------------
+      int_size := DBMS_LOB.GETLENGTH(p_input);
+      int_loop := int_size / int_buffer;
+      
+      FOR i IN 0 .. int_loop
+      LOOP
+         raw_buffer := DBMS_LOB.SUBSTR(
+             p_input
+            ,int_buffer
+            ,i * int_buffer + 1
+         );
+         
+         clb_tmp := clb_tmp || 
+                 'DBMS_LOB.APPEND(' || str_lob_name || ',' ||
+                 'HEXTORAW(''' || RAWTOHEX(raw_buffer) || '''));';
+         
+         IF i < int_loop
+         THEN
+            clb_tmp := clb_tmp || str_delim_value;
+         
+         END IF;
+         
+      END LOOP;
+      
+      RETURN clb_tmp;
+      
+   END blob2plsql;
    
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
