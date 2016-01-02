@@ -12,6 +12,14 @@ AS
    Utilities for the conversion and inspection of Oracle Spatial objects as 
    text.
    
+   Generally there are few reasons for you to want to manifest Oracle Spatial 
+   objects as SQL text. So you should only be using this code if you need to 
+   generate an example for an OTN posting or Oracle SR, or if you are exchanging 
+   a very modest amount of data with a colleague who has limited access to 
+   Oracle. Overwhelmingly the proper way to exchange Oracle data is via datapump.
+
+   See the DZ_TESTDATA project as an example of what this module can do.
+   
    */
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
@@ -38,7 +46,7 @@ AS
       
    Notes:
    
-   - Input objects include MDSYS.SDO_GEOMETRY, MDSYS.SDO_GEOMETRY_ARRAY,
+   - Input objects may include MDSYS.SDO_GEOMETRY, MDSYS.SDO_GEOMETRY_ARRAY,
      MDSYS.SDO_POINT_TYPE, MDSYS.SDO_ELEM_INFO_ARRAY, MDSYS.SDO_ORDINATE_ARRAY,
      MDSYS.SDO_GEORASTER, MDSYS.SDO_RASTER and MDSYS.SDO_DIM_ARRAY.
      
@@ -49,8 +57,9 @@ AS
      of generated text data back through sqlplus is also going to fail.  These 
      utilities are provided for very modest purposes primarily to inspect the  
      details of small example spatial objects or package up one or two smaller 
-     sized objects for transport to a collaborator.  In all situations the use
-     of Oracle datapump to import and export spatial data is the way to go.
+     sized objects for transport via text to a collaborator.  In all situations 
+     the use of Oracle datapump to import and export spatial data is the way to 
+     go.
 
    */
    FUNCTION sdo2sql(
@@ -87,6 +96,10 @@ AS
       ,p_pretty_print     IN  NUMBER   DEFAULT 0
    ) RETURN CLOB;
    
+   -- Note if the package fails to compile in Oracle 12c due to the Georaster
+   -- object below, then either comment out this function in both spec and body
+   -- or activate the Georaster object as detailed at
+   -- https://docs.oracle.com/database/121/GEORS/release_changes.htm#GEORS1382
    FUNCTION sdo2sql(
        p_input            IN  MDSYS.SDO_GEORASTER
       ,p_pretty_print     IN  NUMBER   DEFAULT 0
@@ -133,7 +146,7 @@ AS
    /*
    Function: dz_sdotxt_main.blob2sql
 
-   Utility to convert a blob in textual hex usuable as a right side assignment
+   Utility to convert a blob into textual hex usable as a right side assignment
    in SQL or PLSQL.  In order to use the results in SQL this is greatly limited 
    to 4000 characters and in PLSQL to 32676 characters which when dumping a 
    BLOB is pretty limiting.  Use blob2plsql for a more scaleable work-around.
@@ -156,8 +169,9 @@ AS
    /*
    Function: dz_sdotxt_main.blob2plsql
 
-   Utility to convert a blob in textual hex usuable as a series of DBMS_LOB
-   statements which can be then used as a bind variable in sql statememts.
+   Utility to convert a blob into textual hex usable as a series of DBMS_LOB
+   statements which can be then be combined and used as a bind variable in 
+   PLSQL dynamic SQL statememts.
 
    Parameters:
 
@@ -165,7 +179,7 @@ AS
       p_lob_name - the lob variable name in the statements, default is dz_lob.
       Use different names if you are dumping multiple blobs.
       p_delim_value - the delimiter to place at the end of each statement, the 
-      default is a line feed to make sqplus happy.  Set to NULL if you want no
+      default is a line feed to make sqlplus happy.  Set to NULL if you want no
       linefeeds.
       
    Returns:

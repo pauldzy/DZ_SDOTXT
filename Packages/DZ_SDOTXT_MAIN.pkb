@@ -450,6 +450,10 @@ AS
    END sdo2sql;
    
    -----------------------------------------------------------------------------
+   -- Note if the package fails to compile in Oracle 12c due to the Georaster
+   -- object below, then either comment out this function in both spec and body
+   -- or activate the Georaster object as detailed at
+   -- https://docs.oracle.com/database/121/GEORS/release_changes.htm#GEORS1382
    -----------------------------------------------------------------------------
    FUNCTION sdo2sql(
        p_input        IN  MDSYS.SDO_GEORASTER
