@@ -67,36 +67,51 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION downsize_2d(
-      p_input      IN MDSYS.SDO_GEOMETRY
+      p_input       IN  MDSYS.SDO_GEOMETRY
    ) RETURN MDSYS.SDO_GEOMETRY;
    
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION downsize_2dM(
-      p_input         IN  MDSYS.SDO_GEOMETRY
+      p_input       IN  MDSYS.SDO_GEOMETRY
    ) RETURN MDSYS.SDO_GEOMETRY;
    
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION downsize_3d(
-      p_input      IN MDSYS.SDO_GEOMETRY
+      p_input       IN  MDSYS.SDO_GEOMETRY
    ) RETURN MDSYS.SDO_GEOMETRY;
    
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION indent(
-      p_level      IN NUMBER,
-      p_amount     IN VARCHAR2 DEFAULT '   '
+       p_level      IN  NUMBER
+      ,p_amount     IN  VARCHAR2 DEFAULT '   '
    ) RETURN VARCHAR2;
 
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION pretty(
-      p_input      IN CLOB,
-      p_level      IN NUMBER,
-      p_amount     IN VARCHAR2 DEFAULT '   ',
-      p_linefeed   IN VARCHAR2 DEFAULT CHR(10)
+       p_input      IN  CLOB
+      ,p_level      IN  NUMBER
+      ,p_amount     IN  VARCHAR2 DEFAULT '   '
+      ,p_linefeed   IN  VARCHAR2 DEFAULT CHR(10)
    ) RETURN CLOB;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION blob2clob(
+       p_input      IN  BLOB
+      ,p_decompress IN  VARCHAR2 DEFAULT 'FALSE'
+   ) RETURN CLOB;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION clob2blob(
+       p_input      IN  CLOB
+      ,p_compress   IN  VARCHAR2 DEFAULT 'FALSE' 
+      ,p_comp_qual  IN  NUMBER   DEFAULT 6   
+   ) RETURN BLOB;
    
 END dz_sdotxt_util;
 /
@@ -113,7 +128,7 @@ AS
    ----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION true_point(
-      p_input      IN MDSYS.SDO_GEOMETRY
+      p_input      IN  MDSYS.SDO_GEOMETRY
    ) RETURN MDSYS.SDO_GEOMETRY
    AS
    BEGIN
@@ -175,7 +190,7 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION downsize_2d(
-      p_input   IN MDSYS.SDO_GEOMETRY
+      p_input      IN  MDSYS.SDO_GEOMETRY
    ) RETURN MDSYS.SDO_GEOMETRY
    AS
       geom_2d       MDSYS.SDO_GEOMETRY;
@@ -271,7 +286,7 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION downsize_2dM(
-      p_input         IN  MDSYS.SDO_GEOMETRY
+      p_input      IN  MDSYS.SDO_GEOMETRY
    ) RETURN MDSYS.SDO_GEOMETRY
    AS
       geom_2dm      MDSYS.SDO_GEOMETRY;
@@ -401,7 +416,7 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION downsize_3d(
-      p_input   IN MDSYS.SDO_GEOMETRY
+      p_input      IN  MDSYS.SDO_GEOMETRY
    ) RETURN MDSYS.SDO_GEOMETRY
    AS
       geom_3d       MDSYS.SDO_GEOMETRY;
@@ -519,8 +534,8 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION indent(
-      p_level      IN NUMBER,
-      p_amount     IN VARCHAR2 DEFAULT '   '
+       p_level     IN  NUMBER
+      ,p_amount    IN  VARCHAR2 DEFAULT '   '
    ) RETURN VARCHAR2
    AS
       str_output VARCHAR2(4000 Char) := '';
@@ -548,10 +563,10 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION pretty(
-      p_input      IN CLOB,
-      p_level      IN NUMBER,
-      p_amount     IN VARCHAR2 DEFAULT '   ',
-      p_linefeed   IN VARCHAR2 DEFAULT CHR(10)
+       p_input     IN  CLOB
+      ,p_level     IN  NUMBER
+      ,p_amount    IN  VARCHAR2 DEFAULT '   '
+      ,p_linefeed  IN  VARCHAR2 DEFAULT CHR(10)
    ) RETURN CLOB
    AS
       str_amount   VARCHAR2(4000 Char) := p_amount;
@@ -598,6 +613,149 @@ AS
 
    END pretty;
    
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION blob2clob(
+       p_input      IN  BLOB
+      ,p_decompress IN  VARCHAR2 DEFAULT 'FALSE'
+   ) RETURN CLOB
+   AS
+      l_blob         BLOB := p_input;
+      l_clob         CLOB;
+      l_src_offset   NUMBER;
+      l_dest_offset  NUMBER;
+      v_lang_context NUMBER := DBMS_LOB.DEFAULT_LANG_CTX;
+      l_warning      NUMBER;
+      l_amount       NUMBER;
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF p_input IS NULL
+      OR DBMS_LOB.GETLENGTH(p_input) = 0
+      THEN
+         RETURN NULL;
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Decompress input blob if requested
+      --------------------------------------------------------------------------
+      IF p_decompress = 'TRUE'
+      THEN
+         l_blob := UTL_COMPRESS.LZ_UNCOMPRESS(l_blob);
+          
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Generate a temporary clob to hold results
+      --------------------------------------------------------------------------
+      DBMS_LOB.CREATETEMPORARY(l_clob, TRUE);
+      l_src_offset  := 1;
+      l_dest_offset := 1;
+      l_amount := DBMS_LOB.GETLENGTH(l_blob);
+      
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Convert blob to clob
+      --------------------------------------------------------------------------
+      DBMS_LOB.CONVERTTOCLOB(
+          l_clob
+         ,l_blob
+         ,l_amount
+         ,l_src_offset
+         ,l_dest_offset
+         ,1
+         ,v_lang_context
+         ,l_warning
+      );
+
+      --------------------------------------------------------------------------
+      -- Step 50
+      -- Return results
+      --------------------------------------------------------------------------
+      RETURN l_clob;
+
+   END blob2clob;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION clob2blob(
+       p_input      IN  CLOB
+      ,p_compress   IN  VARCHAR2 DEFAULT 'FALSE' 
+      ,p_comp_qual  IN  NUMBER   DEFAULT 6 
+   ) RETURN BLOB
+   AS
+      l_blob         BLOB;
+      l_src_offset   NUMBER;
+      l_dest_offset  NUMBER;
+      v_lang_context NUMBER := DBMS_LOB.DEFAULT_LANG_CTX;
+      l_warning      NUMBER;
+      l_amount       NUMBER;
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF p_input IS NULL
+      OR DBMS_LOB.GETLENGTH(p_input) = 0
+      THEN
+         RETURN NULL;
+         
+      END IF;
+
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Generate a temporary blob to hold results
+      --------------------------------------------------------------------------
+      DBMS_LOB.CREATETEMPORARY(l_blob, TRUE);
+      l_src_offset  := 1;
+      l_dest_offset := 1;
+      l_amount := DBMS_LOB.GETLENGTH(p_input);
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Convert clob to blob
+      --------------------------------------------------------------------------
+      DBMS_LOB.CONVERTTOBLOB(
+          l_blob
+         ,p_input
+         ,l_amount
+         ,l_src_offset
+         ,l_dest_offset
+         ,1
+         ,v_lang_context
+         ,l_warning
+      );
+      
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Compress blob if requested
+      --------------------------------------------------------------------------
+      IF p_compress = 'TRUE'
+      THEN
+         RETURN UTL_COMPRESS.LZ_COMPRESS(
+             src     => l_blob
+            ,quality => p_comp_qual 
+         );
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 50
+      -- Return results
+      --------------------------------------------------------------------------
+      RETURN l_blob;
+
+   END clob2blob;
+   
 END dz_sdotxt_util;
 /
 
@@ -613,8 +771,8 @@ AS
    /*
    header: DZ_SDOTXT
      
-   - Build ID: 8
-   - TFS Change Set: 8419
+   - Build ID: 9
+   - TFS Change Set: 8430
    
    Utilities for the conversion and inspection of Oracle Spatial objects as 
    text.
@@ -799,6 +957,73 @@ AS
       ,p_lob_name     IN  VARCHAR2 DEFAULT 'dz_lob'
       ,p_delim_value  IN  VARCHAR2 DEFAULT CHR(10)
    ) RETURN CLOB;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   /*
+   Function: dz_sdotxt_main.sdo2geomblob
+
+   Utility to convert a geometry into the secret bar-delimited CLOB format 
+   which is then compressed with UTL_COMPRESS into a BLOB.
+   
+   This utility has a very specific use case of squeezing down a larger geometry
+   into a blob which can be expressed as sql text using blob2plsql and thus
+   shared in a OTN forum or other situation whereby a collaborator may have
+   limited access to Oracle datapump.  I can think of no scenarios where this 
+   would be appropriate for production or other true ETL tasks.  The proper way
+   to share Oracle data is via datapump.
+   
+   The easiest way to convert the blob created by this procedure back into 
+   MDSYS.SDO_GEOMETRY is via geomblob2sdo.  Neither of these functions are that
+   overly complex.  Note that in many cases it may be easier to just convert 
+   your geometry to a WKB BLOB via MDSYS.SDO_UTIL.TO_WKBGEOMETRY and then
+   dump to text via blob2plsql.  To rebuild that blob into a geometry just push 
+   the blob into the MDSYS.SDO_GEOMETRY constructor.  However, the Java-based 
+   WKB handling in Oracle Spatial is very old and only supports the most 
+   basic geometry types corresponding to the OGC Simple Features version 1.0.  
+   Its not going to work for LRS, 3D, or compound geometries. This utility uses
+   the secret SDO_UTIL.TO_CLOB function to generate a bar-delimited version of
+   the geometry object which while larger in size, should support all forms of 
+   Oracle Spatial geometries.
+
+   Parameters:
+
+      p_input - MDSYS.SDO_GEOMETRY
+      p_comp_qual - UTL_COMPRESS.LZ_COMPRESS compression quality, the default of
+      nine is the highest compression as why would you be doing this if you were
+      not trying to pack things down as much as possible.  Change if you like.
+      
+   Returns:
+
+      BLOB result.
+
+   */
+   FUNCTION sdo2geomblob(
+       p_input        IN  MDSYS.SDO_GEOMETRY
+      ,p_comp_qual    IN  NUMBER   DEFAULT 9 
+   ) RETURN BLOB;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   /*
+   Function: dz_sdotxt_main.geomblob2sdo
+
+   Utility to convert a blob of compressed bar-delimited geometry back into 
+   MDSYS.SDO_GEOMETRY.  The main purpose of this function is to unpack geometries
+   converted to blobs with sdo2geomblob.
+
+   Parameters:
+
+      p_input - BLOB of compressed bar-delimited geometry.
+      
+   Returns:
+
+      MDSYS.SDO_GEOMETRY result.
+
+   */
+   FUNCTION geomblob2sdo(
+       p_input        IN  BLOB
+   ) RETURN MDSYS.SDO_GEOMETRY;
    
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
@@ -1729,14 +1954,18 @@ AS
             ,i * int_buffer + 1
          );
          
-         clb_tmp := clb_tmp || 
-                 'DBMS_LOB.APPEND(' || str_lob_name || ',' ||
-                 'HEXTORAW(''' || RAWTOHEX(raw_buffer) || '''));';
-         
-         IF i < int_loop
+         IF UTL_RAW.LENGTH(raw_buffer) > 0
          THEN
-            clb_tmp := clb_tmp || str_delim_value;
-         
+            clb_tmp := clb_tmp || 
+                    'DBMS_LOB.APPEND(' || str_lob_name || ',' ||
+                    'HEXTORAW(''' || RAWTOHEX(raw_buffer) || '''));';
+            
+            IF i < int_loop
+            THEN
+               clb_tmp := clb_tmp || str_delim_value;
+            
+            END IF;
+            
          END IF;
          
       END LOOP;
@@ -1744,6 +1973,96 @@ AS
       RETURN clb_tmp;
       
    END blob2plsql;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION sdo2geomblob(
+       p_input        IN  MDSYS.SDO_GEOMETRY
+      ,p_comp_qual    IN  NUMBER   DEFAULT 9 
+   ) RETURN BLOB
+   AS
+      clb_geom CLOB;
+      blb_geom BLOB;
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF p_input IS NULL
+      THEN
+         RETURN NULL;
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Convert the geometry to bar-delimited clob
+      --------------------------------------------------------------------------
+      clb_geom := MDSYS.SDO_UTIL.TO_CLOB(p_input);
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Convert the bar-delimited clob to compressed blob
+      --------------------------------------------------------------------------
+      blb_geom := dz_sdotxt_util.clob2blob(
+          p_input     => clb_geom
+         ,p_compress  => 'TRUE'
+         ,p_comp_qual => p_comp_qual
+      );
+      
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Return the results
+      --------------------------------------------------------------------------
+      RETURN blb_geom;
+   
+   END sdo2geomblob;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION geomblob2sdo(
+       p_input        IN  BLOB
+   ) RETURN MDSYS.SDO_GEOMETRY
+   AS
+      clb_geom   CLOB;
+      sdo_output MDSYS.SDO_GEOMETRY;
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF p_input IS NULL
+      THEN
+         RETURN NULL;
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Convert the compressed blob to bar-delimited clob geom
+      --------------------------------------------------------------------------
+      clb_geom := dz_sdotxt_util.blob2clob(
+          p_input      => p_input
+         ,p_decompress => 'TRUE'
+      );
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Convert the bar-delimited clob geom to sdo_geometry
+      --------------------------------------------------------------------------
+      sdo_output := MDSYS.SDO_UTIL.FROM_CLOB(clb_geom);
+      
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Return the results
+      --------------------------------------------------------------------------
+      RETURN sdo_output;
+   
+   END geomblob2sdo;
    
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
@@ -2299,7 +2618,7 @@ AS
          END IF;
          
          int_sanity := int_sanity + 1;
-         IF int_sanity > 100
+         IF int_sanity > 600
          THEN
             RAISE_APPLICATION_ERROR(-20001,'sanity check');
             
@@ -2326,10 +2645,10 @@ CREATE OR REPLACE PACKAGE dz_sdotxt_test
 AUTHID DEFINER
 AS
 
-   C_TFS_CHANGESET CONSTANT NUMBER := 8419;
-   C_JENKINS_JOBNM CONSTANT VARCHAR2(255 Char) := 'NULL';
-   C_JENKINS_BUILD CONSTANT NUMBER := 8;
-   C_JENKINS_BLDID CONSTANT VARCHAR2(255 Char) := 'NULL';
+   C_TFS_CHANGESET CONSTANT NUMBER := 8430;
+   C_JENKINS_JOBNM CONSTANT VARCHAR2(255 Char) := 'BUILD-DZ_SDOTXT';
+   C_JENKINS_BUILD CONSTANT NUMBER := 9;
+   C_JENKINS_BLDID CONSTANT VARCHAR2(255 Char) := '9';
    
    C_PREREQUISITES CONSTANT MDSYS.SDO_STRING2_ARRAY := MDSYS.SDO_STRING2_ARRAY(
    );
