@@ -4,7 +4,7 @@ AS
    ----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION true_point(
-      p_input      IN MDSYS.SDO_GEOMETRY
+      p_input      IN  MDSYS.SDO_GEOMETRY
    ) RETURN MDSYS.SDO_GEOMETRY
    AS
    BEGIN
@@ -66,7 +66,7 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION downsize_2d(
-      p_input   IN MDSYS.SDO_GEOMETRY
+      p_input      IN  MDSYS.SDO_GEOMETRY
    ) RETURN MDSYS.SDO_GEOMETRY
    AS
       geom_2d       MDSYS.SDO_GEOMETRY;
@@ -162,7 +162,7 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION downsize_2dM(
-      p_input         IN  MDSYS.SDO_GEOMETRY
+      p_input      IN  MDSYS.SDO_GEOMETRY
    ) RETURN MDSYS.SDO_GEOMETRY
    AS
       geom_2dm      MDSYS.SDO_GEOMETRY;
@@ -292,7 +292,7 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION downsize_3d(
-      p_input   IN MDSYS.SDO_GEOMETRY
+      p_input      IN  MDSYS.SDO_GEOMETRY
    ) RETURN MDSYS.SDO_GEOMETRY
    AS
       geom_3d       MDSYS.SDO_GEOMETRY;
@@ -410,8 +410,8 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION indent(
-      p_level      IN NUMBER,
-      p_amount     IN VARCHAR2 DEFAULT '   '
+       p_level     IN  NUMBER
+      ,p_amount    IN  VARCHAR2 DEFAULT '   '
    ) RETURN VARCHAR2
    AS
       str_output VARCHAR2(4000 Char) := '';
@@ -439,10 +439,10 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    FUNCTION pretty(
-      p_input      IN CLOB,
-      p_level      IN NUMBER,
-      p_amount     IN VARCHAR2 DEFAULT '   ',
-      p_linefeed   IN VARCHAR2 DEFAULT CHR(10)
+       p_input     IN  CLOB
+      ,p_level     IN  NUMBER
+      ,p_amount    IN  VARCHAR2 DEFAULT '   '
+      ,p_linefeed  IN  VARCHAR2 DEFAULT CHR(10)
    ) RETURN CLOB
    AS
       str_amount   VARCHAR2(4000 Char) := p_amount;
@@ -488,6 +488,149 @@ AS
       END IF;
 
    END pretty;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION blob2clob(
+       p_input      IN  BLOB
+      ,p_decompress IN  VARCHAR2 DEFAULT 'FALSE'
+   ) RETURN CLOB
+   AS
+      l_blob         BLOB := p_input;
+      l_clob         CLOB;
+      l_src_offset   NUMBER;
+      l_dest_offset  NUMBER;
+      v_lang_context NUMBER := DBMS_LOB.DEFAULT_LANG_CTX;
+      l_warning      NUMBER;
+      l_amount       NUMBER;
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF p_input IS NULL
+      OR DBMS_LOB.GETLENGTH(p_input) = 0
+      THEN
+         RETURN NULL;
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Decompress input blob if requested
+      --------------------------------------------------------------------------
+      IF p_decompress = 'TRUE'
+      THEN
+         l_blob := UTL_COMPRESS.LZ_UNCOMPRESS(l_blob);
+          
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Generate a temporary clob to hold results
+      --------------------------------------------------------------------------
+      DBMS_LOB.CREATETEMPORARY(l_clob, TRUE);
+      l_src_offset  := 1;
+      l_dest_offset := 1;
+      l_amount := DBMS_LOB.GETLENGTH(l_blob);
+      
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Convert blob to clob
+      --------------------------------------------------------------------------
+      DBMS_LOB.CONVERTTOCLOB(
+          l_clob
+         ,l_blob
+         ,l_amount
+         ,l_src_offset
+         ,l_dest_offset
+         ,1
+         ,v_lang_context
+         ,l_warning
+      );
+
+      --------------------------------------------------------------------------
+      -- Step 50
+      -- Return results
+      --------------------------------------------------------------------------
+      RETURN l_clob;
+
+   END blob2clob;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION clob2blob(
+       p_input      IN  CLOB
+      ,p_compress   IN  VARCHAR2 DEFAULT 'FALSE' 
+      ,p_comp_qual  IN  NUMBER   DEFAULT 6 
+   ) RETURN BLOB
+   AS
+      l_blob         BLOB;
+      l_src_offset   NUMBER;
+      l_dest_offset  NUMBER;
+      v_lang_context NUMBER := DBMS_LOB.DEFAULT_LANG_CTX;
+      l_warning      NUMBER;
+      l_amount       NUMBER;
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF p_input IS NULL
+      OR DBMS_LOB.GETLENGTH(p_input) = 0
+      THEN
+         RETURN NULL;
+         
+      END IF;
+
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Generate a temporary blob to hold results
+      --------------------------------------------------------------------------
+      DBMS_LOB.CREATETEMPORARY(l_blob, TRUE);
+      l_src_offset  := 1;
+      l_dest_offset := 1;
+      l_amount := DBMS_LOB.GETLENGTH(p_input);
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Convert clob to blob
+      --------------------------------------------------------------------------
+      DBMS_LOB.CONVERTTOBLOB(
+          l_blob
+         ,p_input
+         ,l_amount
+         ,l_src_offset
+         ,l_dest_offset
+         ,1
+         ,v_lang_context
+         ,l_warning
+      );
+      
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Compress blob if requested
+      --------------------------------------------------------------------------
+      IF p_compress = 'TRUE'
+      THEN
+         RETURN UTL_COMPRESS.LZ_COMPRESS(
+             src     => l_blob
+            ,quality => p_comp_qual 
+         );
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 50
+      -- Return results
+      --------------------------------------------------------------------------
+      RETURN l_blob;
+
+   END clob2blob;
    
 END dz_sdotxt_util;
 /
