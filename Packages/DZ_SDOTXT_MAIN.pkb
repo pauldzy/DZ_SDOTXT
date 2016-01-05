@@ -738,14 +738,18 @@ AS
             ,i * int_buffer + 1
          );
          
-         clb_tmp := clb_tmp || 
-                 'DBMS_LOB.APPEND(' || str_lob_name || ',' ||
-                 'HEXTORAW(''' || RAWTOHEX(raw_buffer) || '''));';
-         
-         IF i < int_loop
+         IF UTL_RAW.LENGTH(raw_buffer) > 0
          THEN
-            clb_tmp := clb_tmp || str_delim_value;
-         
+            clb_tmp := clb_tmp || 
+                    'DBMS_LOB.APPEND(' || str_lob_name || ',' ||
+                    'HEXTORAW(''' || RAWTOHEX(raw_buffer) || '''));';
+            
+            IF i < int_loop
+            THEN
+               clb_tmp := clb_tmp || str_delim_value;
+            
+            END IF;
+            
          END IF;
          
       END LOOP;
@@ -753,6 +757,96 @@ AS
       RETURN clb_tmp;
       
    END blob2plsql;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION sdo2geomblob(
+       p_input        IN  MDSYS.SDO_GEOMETRY
+      ,p_comp_qual    IN  NUMBER   DEFAULT 9 
+   ) RETURN BLOB
+   AS
+      clb_geom CLOB;
+      blb_geom BLOB;
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF p_input IS NULL
+      THEN
+         RETURN NULL;
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Convert the geometry to bar-delimited clob
+      --------------------------------------------------------------------------
+      clb_geom := MDSYS.SDO_UTIL.TO_CLOB(p_input);
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Convert the bar-delimited clob to compressed blob
+      --------------------------------------------------------------------------
+      blb_geom := dz_sdotxt_util.clob2blob(
+          p_input     => clb_geom
+         ,p_compress  => 'TRUE'
+         ,p_comp_qual => p_comp_qual
+      );
+      
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Return the results
+      --------------------------------------------------------------------------
+      RETURN blb_geom;
+   
+   END sdo2geomblob;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION geomblob2sdo(
+       p_input        IN  BLOB
+   ) RETURN MDSYS.SDO_GEOMETRY
+   AS
+      clb_geom   CLOB;
+      sdo_output MDSYS.SDO_GEOMETRY;
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Check over incoming parameters
+      --------------------------------------------------------------------------
+      IF p_input IS NULL
+      THEN
+         RETURN NULL;
+         
+      END IF;
+      
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Convert the compressed blob to bar-delimited clob geom
+      --------------------------------------------------------------------------
+      clb_geom := dz_sdotxt_util.blob2clob(
+          p_input      => p_input
+         ,p_decompress => 'TRUE'
+      );
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Convert the bar-delimited clob geom to sdo_geometry
+      --------------------------------------------------------------------------
+      sdo_output := MDSYS.SDO_UTIL.FROM_CLOB(clb_geom);
+      
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Return the results
+      --------------------------------------------------------------------------
+      RETURN sdo_output;
+   
+   END geomblob2sdo;
    
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
@@ -1308,7 +1402,7 @@ AS
          END IF;
          
          int_sanity := int_sanity + 1;
-         IF int_sanity > 100
+         IF int_sanity > 600
          THEN
             RAISE_APPLICATION_ERROR(-20001,'sanity check');
             

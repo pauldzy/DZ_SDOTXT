@@ -196,6 +196,73 @@ AS
    -----------------------------------------------------------------------------
    -----------------------------------------------------------------------------
    /*
+   Function: dz_sdotxt_main.sdo2geomblob
+
+   Utility to convert a geometry into the secret bar-delimited CLOB format 
+   which is then compressed with UTL_COMPRESS into a BLOB.
+   
+   This utility has a very specific use case of squeezing down a larger geometry
+   into a blob which can be expressed as sql text using blob2plsql and thus
+   shared in a OTN forum or other situation whereby a collaborator may have
+   limited access to Oracle datapump.  I can think of no scenarios where this 
+   would be appropriate for production or other true ETL tasks.  The proper way
+   to share Oracle data is via datapump.
+   
+   The easiest way to convert the blob created by this procedure back into 
+   MDSYS.SDO_GEOMETRY is via geomblob2sdo.  Neither of these functions are that
+   overly complex.  Note that in many cases it may be easier to just convert 
+   your geometry to a WKB BLOB via MDSYS.SDO_UTIL.TO_WKBGEOMETRY and then
+   dump to text via blob2plsql.  To rebuild that blob into a geometry just push 
+   the blob into the MDSYS.SDO_GEOMETRY constructor.  However, the Java-based 
+   WKB handling in Oracle Spatial is very old and only supports the most 
+   basic geometry types corresponding to the OGC Simple Features version 1.0.  
+   Its not going to work for LRS, 3D, or compound geometries. This utility uses
+   the secret SDO_UTIL.TO_CLOB function to generate a bar-delimited version of
+   the geometry object which while larger in size, should support all forms of 
+   Oracle Spatial geometries.
+
+   Parameters:
+
+      p_input - MDSYS.SDO_GEOMETRY
+      p_comp_qual - UTL_COMPRESS.LZ_COMPRESS compression quality, the default of
+      nine is the highest compression as why would you be doing this if you were
+      not trying to pack things down as much as possible.  Change if you like.
+      
+   Returns:
+
+      BLOB result.
+
+   */
+   FUNCTION sdo2geomblob(
+       p_input        IN  MDSYS.SDO_GEOMETRY
+      ,p_comp_qual    IN  NUMBER   DEFAULT 9 
+   ) RETURN BLOB;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   /*
+   Function: dz_sdotxt_main.geomblob2sdo
+
+   Utility to convert a blob of compressed bar-delimited geometry back into 
+   MDSYS.SDO_GEOMETRY.  The main purpose of this function is to unpack geometries
+   converted to blobs with sdo2geomblob.
+
+   Parameters:
+
+      p_input - BLOB of compressed bar-delimited geometry.
+      
+   Returns:
+
+      MDSYS.SDO_GEOMETRY result.
+
+   */
+   FUNCTION geomblob2sdo(
+       p_input        IN  BLOB
+   ) RETURN MDSYS.SDO_GEOMETRY;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   /*
    Function: dz_sdotxt_main.dump_string_endpoints
 
    Utility to convert to text the ordinates of the endpoints of a given linestring.
