@@ -10,7 +10,7 @@ See the [DZ_TESTDATA] (https://github.com/pauldzy/DZ_TESTDATA) project as an exa
 In the paragraph above I state that you really should never attempt to dump anything beyond small sample geometries to text.  Unlike other databases (such as PostgreSQL) you are greatly limited as to how much information you can persist in a given block of PLSQL code.  When you submit a geometry in textual form via the object constructor, each ordinate is viewed as a node by the code parser.  So again, don't go this route.  But you are still reading!  Yes, okay sure, sometimes one may **really** want to get a large geometry into a chunk of text to share with a colleague or post as a gist or such.  But of course never do this in your production or really any workflow.  With that out of the way I provide code to allow you to crunch a geometry into a lob which can be dumped to text as hex and then afterwards reconstructed.  There are still limits but this should allow you to persist as text geometries that are much larger than what you can persist in the object constructor form.
 
 Given a larger geometry
-```
+```sql
 SELECT
 dz_sdotxt_main.blob2plsql(
     dz_sdotxt_main.sdo2geomblob(a.shape)
@@ -21,7 +21,7 @@ WHERE
 a.objectid = 44;
 ```
 this will create a set of lob append statements that you can paste into a chunk of PLSQL.  The size of each hex dump line is limited to allow it flow through SQLPLUS.  Now each of these statements will utilize a couple of nodes in the code parser but far less than one node per ordinate, also the blob is compressed using UTL_COMPRESS.
-```
+```sql
 DECLARE
    dz_lob BLOB
    dz_sdo MDSYS.SDO_GEOMETRY
@@ -46,7 +46,7 @@ END;
 Again I am not entirely sure of the upper limit of this technique in terms of the number of ordinates.  Drop me a line if you sort it out.  The above solution uses the secret MDSYS.SDO_UTIL.TO_CLOB and MDSYS.SDO_UTIL.FROM_CLOB functions to dump and reconstruct the geometry object.  This **should** work for all forms and types of geometries as it just a manifestation of the VARRAYs as bar-delimited text.  But the recipiant of the sql text dump will either need geomblob2sdo or the logic of that function to reconstruct the geometry.  Take a look at the function, it's not that complicated and could be easily put into the declaration of your PLSQL block.  However it is a small complication.
 
 Another approach is if your geometry is compliant with the OGC Simple Features specification 1.0 - e.g. simple 2D straightline geometries, you can use WKB as the blob format to pass around.  Note that WKB is not compressed as far as I can tell so it may be larger than the sdo2geomblob solution.  But the reconstruction step is much simpler.  
-```
+```sql
 SELECT
 dz_sdotxt_main.blob2plsql(
     MDSYS.SDO_UTIL.TO_WKBGEOMETRY(a.shape)
