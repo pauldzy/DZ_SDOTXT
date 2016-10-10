@@ -7,7 +7,7 @@ AS
    header: DZ_SDOTXT
      
    - Build ID: DZBUILDIDDZ
-   - TFS Change Set: DZTFSCHANGESETDZ
+   - TFS Change Set: DZCHANGESETDZ
    
    Utilities for the conversion and inspection of Oracle Spatial objects as 
    text.
