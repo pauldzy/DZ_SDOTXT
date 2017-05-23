@@ -4,7 +4,7 @@ For the most up-to-date documentation see the auto-build  [dz_sdotxt_deploy.pdf]
 
 Generally there are few reasons for you to want to manifest Oracle Spatial objects as SQL text.  So you should only be using this code if you need to generate an example for an OTN posting or a very simple Oracle SR, or if you are exchanging a very modest amount of data with a colleague who has limited access to Oracle.  Overwhelmingly the proper way to exchange Oracle data is via datapump.  
 
-See the [DZ_TESTDATA] (https://github.com/pauldzy/DZ_TESTDATA) project as an example of what this repository can do.
+See the [DZ_TESTDATA](https://github.com/pauldzy/DZ_TESTDATA) project as an example of what this repository can do.
 
 ##### Manifesting large Oracle Spatial geometries as sql text
 In the paragraph above I state that you really should never attempt to dump anything beyond small sample geometries to text.  Unlike other databases (such as PostgreSQL) you are greatly limited as to how much information you can persist in a given block of PLSQL code.  When you submit a geometry in textual form via the object constructor, each ordinate is viewed as a node by the code parser.  So again, don't go this route.  But you are still reading!  Yes, okay sure, sometimes one may **really** want to get a large geometry into a chunk of text to share with a colleague or post as a gist or such.  But of course never do this in your production or really any workflow.  With that out of the way I provide code to allow you to crunch a geometry into a lob which can be dumped to text as hex and then afterwards reconstructed.  There are still limits but this should allow you to persist as text geometries that are much larger than what you can persist in the object constructor form.
