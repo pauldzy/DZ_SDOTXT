@@ -99,7 +99,7 @@ AS
    -- Note if the package fails to compile in Oracle 12c due to the Georaster
    -- object below, then either comment out this function in both spec and body
    -- or activate the Georaster object as detailed at
-   -- https://docs.oracle.com/database/121/GEORS/release_changes.htm#GEORS1382
+   -- https://docs.oracle.com/database/121/SPATL/ensuring-that-georaster-works-properly-installation-or-upgrade.htm#SPATL1560
    FUNCTION sdo2sql(
        p_input            IN  MDSYS.SDO_GEORASTER
       ,p_pretty_print     IN  NUMBER   DEFAULT 0
@@ -258,6 +258,10 @@ AS
    */
    FUNCTION geomblob2sdo(
        p_input        IN  BLOB
+   ) RETURN MDSYS.SDO_GEOMETRY;
+   
+   FUNCTION geomblob2sdo(
+       p_input        IN  RAW
    ) RETURN MDSYS.SDO_GEOMETRY;
    
    -----------------------------------------------------------------------------

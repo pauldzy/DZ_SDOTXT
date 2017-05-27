@@ -648,6 +648,7 @@ AS
    
       IF p_input IS NULL
       THEN
+         clb_tmp := 'EMPTY_BLOB()';         
          RETURN clb_tmp;
       
       END IF;
@@ -699,12 +700,6 @@ AS
       -- Step 10
       -- Check over incoming parameters
       --------------------------------------------------------------------------
-      IF p_input IS NULL
-      THEN
-         RETURN clb_tmp;
-      
-      END IF;
-      
       IF str_lob_name IS NULL
       THEN
          str_lob_name := 'dz_lob';
@@ -721,38 +716,42 @@ AS
       -- Step 20
       -- Write the initial temp creation
       --------------------------------------------------------------------------
-      clb_tmp := 'DBMS_LOB.CREATETEMPORARY(' || str_lob_name || ',TRUE);' || str_delim_value;
+      clb_tmp := 'DBMS_LOB.CREATETEMPORARY(' || str_lob_name || ',TRUE);' 
+              || str_delim_value;
+
+      IF p_input IS NULL
+      THEN
+         clb_tmp := clb_tmp || 'DBMS_LOB.APPEND(' || str_lob_name || ',EMPTY_BLOB());'
+                 || str_delim_value;
       
+      ELSE
       --------------------------------------------------------------------------
       -- Step 30
       --  Loop through loop and write append statements
       --------------------------------------------------------------------------
-      int_size := DBMS_LOB.GETLENGTH(p_input);
-      int_loop := int_size / int_buffer;
-      
-      FOR i IN 0 .. int_loop
-      LOOP
-         raw_buffer := DBMS_LOB.SUBSTR(
-             p_input
-            ,int_buffer
-            ,i * int_buffer + 1
-         );
+         int_size := DBMS_LOB.GETLENGTH(p_input);
+         int_loop := int_size / int_buffer;
          
-         IF UTL_RAW.LENGTH(raw_buffer) > 0
-         THEN
-            clb_tmp := clb_tmp || 
-                    'DBMS_LOB.APPEND(' || str_lob_name || ',' ||
-                    'HEXTORAW(''' || RAWTOHEX(raw_buffer) || '''));';
+         FOR i IN 0 .. int_loop
+         LOOP
+            raw_buffer := DBMS_LOB.SUBSTR(
+                p_input
+               ,int_buffer
+               ,i * int_buffer + 1
+            );
             
-            IF i < int_loop
+            IF UTL_RAW.LENGTH(raw_buffer) > 0
             THEN
-               clb_tmp := clb_tmp || str_delim_value;
-            
+               clb_tmp := clb_tmp 
+               || 'DBMS_LOB.APPEND(' || str_lob_name || ',' 
+               || 'HEXTORAW(''' || RAWTOHEX(raw_buffer) || '''));'
+               || str_delim_value;
+               
             END IF;
             
-         END IF;
-         
-      END LOOP;
+         END LOOP;
+      
+      END IF;
       
       RETURN clb_tmp;
       
@@ -845,6 +844,22 @@ AS
       -- Return the results
       --------------------------------------------------------------------------
       RETURN sdo_output;
+   
+   END geomblob2sdo;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION geomblob2sdo(
+       p_input        IN  RAW
+   ) RETURN MDSYS.SDO_GEOMETRY
+   AS
+      blb_geom   BLOB;
+      
+   BEGIN
+   
+      DBMS_LOB.CREATETEMPORARY(blb_geom,TRUE);
+      DBMS_LOB.APPEND(blb_geom,p_input);
+      RETURN geomblob2sdo(blb_geom);
    
    END geomblob2sdo;
    
