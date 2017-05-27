@@ -1,13 +1,11 @@
-
+--
 --*************************--
 PROMPT sqlplus_header.sql;
 
 WHENEVER SQLERROR EXIT -99;
 WHENEVER OSERROR  EXIT -98;
 SET DEFINE OFF;
-
-
-
+--
 --*************************--
 PROMPT DZ_SDOTXT_LABELED.tps;
 
@@ -25,7 +23,7 @@ AS OBJECT (
 
 GRANT EXECUTE ON dz_sdotxt_labeled TO public;
 
-
+--
 --*************************--
 PROMPT DZ_SDOTXT_LABELED.tpb;
 
@@ -45,7 +43,7 @@ AS
 END;
 /
 
-
+--
 --*************************--
 PROMPT DZ_SDOTXT_LABELED_LIST.tps;
 
@@ -56,7 +54,7 @@ TABLE OF dz_sdotxt_labeled;
 
 GRANT EXECUTE ON dz_sdotxt_labeled_list TO public;
 
-
+--
 --*************************--
 PROMPT DZ_SDOTXT_UTIL.pks;
 
@@ -118,7 +116,7 @@ END dz_sdotxt_util;
 
 GRANT EXECUTE ON dz_sdotxt_util TO PUBLIC;
 
-
+--
 --*************************--
 PROMPT DZ_SDOTXT_UTIL.pkb;
 
@@ -759,7 +757,7 @@ AS
 END dz_sdotxt_util;
 /
 
-
+--
 --*************************--
 PROMPT DZ_SDOTXT_MAIN.pks;
 
@@ -771,8 +769,8 @@ AS
    /*
    header: DZ_SDOTXT
      
-   - Build ID: 9
-   - TFS Change Set: 8430
+   - Build ID: 6
+   - Change Set: c6d7d954c3137fd1a076a3a3b49548f9d3bc1128
    
    Utilities for the conversion and inspection of Oracle Spatial objects as 
    text.
@@ -864,7 +862,7 @@ AS
    -- Note if the package fails to compile in Oracle 12c due to the Georaster
    -- object below, then either comment out this function in both spec and body
    -- or activate the Georaster object as detailed at
-   -- https://docs.oracle.com/database/121/GEORS/release_changes.htm#GEORS1382
+   -- https://docs.oracle.com/database/121/SPATL/ensuring-that-georaster-works-properly-installation-or-upgrade.htm#SPATL1560
    FUNCTION sdo2sql(
        p_input            IN  MDSYS.SDO_GEORASTER
       ,p_pretty_print     IN  NUMBER   DEFAULT 0
@@ -1023,6 +1021,10 @@ AS
    */
    FUNCTION geomblob2sdo(
        p_input        IN  BLOB
+   ) RETURN MDSYS.SDO_GEOMETRY;
+   
+   FUNCTION geomblob2sdo(
+       p_input        IN  RAW
    ) RETURN MDSYS.SDO_GEOMETRY;
    
    -----------------------------------------------------------------------------
@@ -1210,7 +1212,7 @@ END dz_sdotxt_main;
 
 GRANT EXECUTE ON dz_sdotxt_main TO public;
 
-
+--
 --*************************--
 PROMPT DZ_SDOTXT_MAIN.pkb;
 
@@ -1864,6 +1866,7 @@ AS
    
       IF p_input IS NULL
       THEN
+         clb_tmp := 'EMPTY_BLOB()';         
          RETURN clb_tmp;
       
       END IF;
@@ -1915,12 +1918,6 @@ AS
       -- Step 10
       -- Check over incoming parameters
       --------------------------------------------------------------------------
-      IF p_input IS NULL
-      THEN
-         RETURN clb_tmp;
-      
-      END IF;
-      
       IF str_lob_name IS NULL
       THEN
          str_lob_name := 'dz_lob';
@@ -1937,38 +1934,42 @@ AS
       -- Step 20
       -- Write the initial temp creation
       --------------------------------------------------------------------------
-      clb_tmp := 'DBMS_LOB.CREATETEMPORARY(' || str_lob_name || ',TRUE);' || str_delim_value;
+      clb_tmp := 'DBMS_LOB.CREATETEMPORARY(' || str_lob_name || ',TRUE);' 
+              || str_delim_value;
+
+      IF p_input IS NULL
+      THEN
+         clb_tmp := clb_tmp || 'DBMS_LOB.APPEND(' || str_lob_name || ',EMPTY_BLOB());'
+                 || str_delim_value;
       
+      ELSE
       --------------------------------------------------------------------------
       -- Step 30
       --  Loop through loop and write append statements
       --------------------------------------------------------------------------
-      int_size := DBMS_LOB.GETLENGTH(p_input);
-      int_loop := int_size / int_buffer;
-      
-      FOR i IN 0 .. int_loop
-      LOOP
-         raw_buffer := DBMS_LOB.SUBSTR(
-             p_input
-            ,int_buffer
-            ,i * int_buffer + 1
-         );
+         int_size := DBMS_LOB.GETLENGTH(p_input);
+         int_loop := int_size / int_buffer;
          
-         IF UTL_RAW.LENGTH(raw_buffer) > 0
-         THEN
-            clb_tmp := clb_tmp || 
-                    'DBMS_LOB.APPEND(' || str_lob_name || ',' ||
-                    'HEXTORAW(''' || RAWTOHEX(raw_buffer) || '''));';
+         FOR i IN 0 .. int_loop
+         LOOP
+            raw_buffer := DBMS_LOB.SUBSTR(
+                p_input
+               ,int_buffer
+               ,i * int_buffer + 1
+            );
             
-            IF i < int_loop
+            IF UTL_RAW.LENGTH(raw_buffer) > 0
             THEN
-               clb_tmp := clb_tmp || str_delim_value;
-            
+               clb_tmp := clb_tmp 
+               || 'DBMS_LOB.APPEND(' || str_lob_name || ',' 
+               || 'HEXTORAW(''' || RAWTOHEX(raw_buffer) || '''));'
+               || str_delim_value;
+               
             END IF;
             
-         END IF;
-         
-      END LOOP;
+         END LOOP;
+      
+      END IF;
       
       RETURN clb_tmp;
       
@@ -2061,6 +2062,22 @@ AS
       -- Return the results
       --------------------------------------------------------------------------
       RETURN sdo_output;
+   
+   END geomblob2sdo;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   FUNCTION geomblob2sdo(
+       p_input        IN  RAW
+   ) RETURN MDSYS.SDO_GEOMETRY
+   AS
+      blb_geom   BLOB;
+      
+   BEGIN
+   
+      DBMS_LOB.CREATETEMPORARY(blb_geom,TRUE);
+      DBMS_LOB.APPEND(blb_geom,p_input);
+      RETURN geomblob2sdo(blb_geom);
    
    END geomblob2sdo;
    
@@ -2637,7 +2654,412 @@ AS
 END dz_sdotxt_main;
 /
 
+--
+--*************************--
+PROMPT DZ_SDOTXT_DUMPER.tps;
 
+CREATE OR REPLACE TYPE dz_sdotxt_dumper FORCE
+AUTHID CURRENT_USER
+AS OBJECT (
+    str_cursor  CLOB
+   ,dummy       INTEGER
+    
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   ,CONSTRUCTOR FUNCTION dz_sdotxt_dumper(
+      p_input      IN  CLOB
+    )
+    RETURN SELF AS RESULT
+    
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   ,MEMBER FUNCTION sql_inserts(
+      p_table_name  IN  VARCHAR2
+    )
+    RETURN CLOB
+    
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   ,MEMBER FUNCTION plsql_inserts(
+      p_table_name  IN  VARCHAR2
+    )
+    RETURN CLOB
+
+);
+/
+
+GRANT EXECUTE ON dz_sdotxt_dumper TO public;
+
+--
+--*************************--
+PROMPT DZ_SDOTXT_DUMPER.tpb;
+
+CREATE OR REPLACE TYPE BODY dz_sdotxt_dumper
+AS
+
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   CONSTRUCTOR FUNCTION dz_sdotxt_dumper(
+      p_input      IN  CLOB
+   )
+   RETURN SELF AS RESULT
+   AS
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Store the sql text
+      --------------------------------------------------------------------------
+      self.str_cursor := p_input;
+      
+      RETURN;
+      
+   END dz_sdotxt_dumper;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   MEMBER FUNCTION sql_inserts(
+      p_table_name  IN  VARCHAR2
+   )
+   RETURN CLOB
+   AS
+      str_insert         VARCHAR2(32000 Char);
+      clb_output         CLOB;
+      desctab            DBMS_SQL.DESC_TAB3;
+      str_holder         VARCHAR2(32000 Char);
+      num_holder         NUMBER;
+      dat_holder         DATE;
+      int_colcnt         PLS_INTEGER;
+      sdo_holder         MDSYS.SDO_GEOMETRY;
+      blb_holder         BLOB;
+      int_cursor         INTEGER;
+      int_exec           INTEGER;
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Open the cursor
+      --------------------------------------------------------------------------
+      int_cursor := DBMS_SQL.OPEN_CURSOR;
+      DBMS_SQL.PARSE(
+          int_cursor
+         ,self.str_cursor
+         ,DBMS_SQL.NATIVE
+      );
+      int_exec := DBMS_SQL.EXECUTE(int_cursor);
+   
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Setup the sql insert
+      --------------------------------------------------------------------------
+      str_insert := 'INSERT INTO ' || p_table_name || CHR(10) || '(';
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Describe and define the columns
+      --------------------------------------------------------------------------
+      DBMS_SQL.DESCRIBE_COLUMNS3(int_cursor,int_colcnt,desctab);
+
+      FOR i IN 1 .. int_colcnt
+      LOOP
+         IF desctab(i).col_type IN (1,9,96)
+         THEN
+            DBMS_SQL.DEFINE_COLUMN(int_cursor,i,str_holder,32000);
+
+         ELSIF desctab(i).col_type = 2
+         THEN
+            DBMS_SQL.DEFINE_COLUMN(int_cursor,i,num_holder);
+
+         ELSIF desctab(i).col_type = 12
+         THEN
+            DBMS_SQL.DEFINE_COLUMN(int_cursor,i,dat_holder);
+
+         ELSIF desctab(i).col_type = 109
+         AND desctab(i).col_type_name = 'SDO_GEOMETRY'
+         THEN
+            DBMS_SQL.DEFINE_COLUMN(int_cursor,i,sdo_holder);
+
+         ELSIF desctab(i).col_type = 113
+         THEN
+            DBMS_SQL.DEFINE_COLUMN(int_cursor,i,blb_holder);
+            
+         END IF;
+         
+         str_insert := str_insert || desctab(i).col_name;
+         
+         IF i < int_colcnt
+         THEN
+            str_insert := str_insert || ',';
+         
+         END IF;
+
+      END LOOP;
+
+      str_insert := str_insert || ')' || CHR(10) || 'VALUES' || CHR(10) || '(';
+
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Spin out the cursor
+      --------------------------------------------------------------------------
+      clb_output := '';
+      WHILE DBMS_SQL.FETCH_ROWS(int_cursor) > 0
+      LOOP
+         clb_output := clb_output || str_insert;
+         
+         FOR i IN 1 .. int_colcnt
+         LOOP
+            IF desctab(i).col_type IN (1,9,96)
+            THEN
+               DBMS_SQL.COLUMN_VALUE(int_cursor,i,str_holder);
+               clb_output := clb_output || '''' || REPLACE(str_holder,'''','''''') || '''';
+
+            ELSIF desctab(i).col_type = 2
+            THEN
+               DBMS_SQL.COLUMN_VALUE(int_cursor,i,num_holder);
+               clb_output := clb_output || TO_CHAR(num_holder);
+
+            ELSIF desctab(i).col_type = 12
+            THEN
+               DBMS_SQL.COLUMN_VALUE(int_cursor,i,dat_holder);
+               clb_output := clb_output || 'TO_DATE(''' || TO_CHAR(dat_holder,'MM/DD/YYYY') || ',''MM/DD/YYYY'')';
+
+            ELSIF desctab(i).col_type = 109
+            AND desctab(i).col_type_name = 'SDO_GEOMETRY'
+            THEN
+               DBMS_SQL.COLUMN_VALUE(int_cursor,i,sdo_holder);
+               clb_output := clb_output || CHR(10) || 'dz_sdotxt_main.geomblob2sdo(' 
+               || dz_sdotxt_main.blob2sql(
+                  dz_sdotxt_main.sdo2geomblob(
+                     p_input => sdo_holder
+                  )
+               ) || ')' || CHR(10);
+            
+            ELSIF desctab(i).col_type = 113
+            THEN
+               DBMS_SQL.COLUMN_VALUE(int_cursor,i,blb_holder);
+               clb_output := clb_output || dz_sdotxt_main.blob2sql(
+                  blb_holder
+               );
+               
+            END IF;
+
+            IF i < int_colcnt
+            THEN
+               clb_output := clb_output || ',';
+
+            ELSE
+               clb_output := clb_output || ');' || CHR(10);
+
+            END IF;
+
+         END LOOP;
+
+      END LOOP;
+
+      --------------------------------------------------------------------------
+      -- Step 50
+      -- Close the cursor
+      --------------------------------------------------------------------------
+      DBMS_SQL.CLOSE_CURSOR(int_cursor);
+      
+      --------------------------------------------------------------------------
+      -- Step 60
+      -- Return results
+      --------------------------------------------------------------------------
+      RETURN clb_output;
+   
+   END sql_inserts;
+   
+   -----------------------------------------------------------------------------
+   -----------------------------------------------------------------------------
+   MEMBER FUNCTION plsql_inserts(
+      p_table_name  IN  VARCHAR2
+   )
+   RETURN CLOB
+   AS
+      str_insert         VARCHAR2(32000 Char);
+      str_declare        VARCHAR2(32000 Char);
+      clb_output         CLOB;
+      clb_record         CLOB;
+      desctab            DBMS_SQL.DESC_TAB3;
+      str_holder         VARCHAR2(32000 Char);
+      num_holder         NUMBER;
+      dat_holder         DATE;
+      int_colcnt         PLS_INTEGER;
+      sdo_holder         MDSYS.SDO_GEOMETRY;
+      blb_holder         BLOB;
+      int_lob_count      PLS_INTEGER;
+      int_cursor         INTEGER;
+      int_exec           INTEGER;
+      
+   BEGIN
+   
+      --------------------------------------------------------------------------
+      -- Step 10
+      -- Open the cursor
+      --------------------------------------------------------------------------
+      int_cursor := DBMS_SQL.OPEN_CURSOR;
+      DBMS_SQL.PARSE(
+          int_cursor
+         ,self.str_cursor
+         ,DBMS_SQL.NATIVE
+      );
+      int_exec := DBMS_SQL.EXECUTE(int_cursor);
+      
+      --------------------------------------------------------------------------
+      -- Step 20
+      -- Setup the sql insert
+      --------------------------------------------------------------------------
+      str_declare := 'DECLARE' || CHR(10);
+      str_insert  := 'INSERT INTO ' || p_table_name || CHR(10) || '(';
+      
+      --------------------------------------------------------------------------
+      -- Step 30
+      -- Describe and define the columns
+      --------------------------------------------------------------------------
+      int_lob_count := 0;
+      DBMS_SQL.DESCRIBE_COLUMNS3(int_cursor,int_colcnt,desctab);
+
+      FOR i IN 1 .. int_colcnt
+      LOOP
+         IF desctab(i).col_type IN (1,9,96)
+         THEN
+            DBMS_SQL.DEFINE_COLUMN(int_cursor,i,str_holder,32000);
+
+         ELSIF desctab(i).col_type = 2
+         THEN
+            DBMS_SQL.DEFINE_COLUMN(int_cursor,i,num_holder);
+
+         ELSIF desctab(i).col_type = 12
+         THEN
+            DBMS_SQL.DEFINE_COLUMN(int_cursor,i,dat_holder);
+
+         ELSIF desctab(i).col_type = 109
+         AND desctab(i).col_type_name = 'SDO_GEOMETRY'
+         THEN
+            DBMS_SQL.DEFINE_COLUMN(int_cursor,i,sdo_holder);
+            int_lob_count := int_lob_count + 1;
+            
+            str_declare := str_declare|| 'dz_lob' || TO_CHAR(int_lob_count) || ' BLOB;' || CHR(10);
+
+         ELSIF desctab(i).col_type = 113
+         THEN
+            DBMS_SQL.DEFINE_COLUMN(int_cursor,i,blb_holder);
+            int_lob_count := int_lob_count + 1;
+            
+            str_declare := str_declare || 'dz_lob' || TO_CHAR(int_lob_count) || ' BLOB;' || CHR(10);
+            
+         END IF;
+         
+         str_insert := str_insert || desctab(i).col_name;
+         
+         IF i < int_colcnt
+         THEN
+            str_insert := str_insert || ',';
+         
+         END IF;
+
+      END LOOP;
+      
+      str_declare := str_declare || 'BEGIN' || CHR(10);
+      str_insert  := str_insert || ')' || CHR(10) || 'VALUES' || CHR(10) || '(';
+
+      --------------------------------------------------------------------------
+      -- Step 40
+      -- Spin out the cursor
+      --------------------------------------------------------------------------
+      clb_output    := '';
+      
+      WHILE DBMS_SQL.FETCH_ROWS(int_cursor) > 0
+      LOOP
+         int_lob_count := 0;
+         clb_output := clb_output || str_declare;
+         clb_record := '';
+         
+         FOR i IN 1 .. int_colcnt
+         LOOP
+            IF desctab(i).col_type IN (1,9,96)
+            THEN
+               DBMS_SQL.COLUMN_VALUE(int_cursor,i,str_holder);
+               clb_record := clb_record || '''' || REPLACE(str_holder,'''','''''') || '''';
+
+            ELSIF desctab(i).col_type = 2
+            THEN
+               DBMS_SQL.COLUMN_VALUE(int_cursor,i,num_holder);
+               clb_record := clb_record || TO_CHAR(num_holder);
+
+            ELSIF desctab(i).col_type = 12
+            THEN
+               DBMS_SQL.COLUMN_VALUE(int_cursor,i,dat_holder);
+               clb_record := clb_record || 'TO_DATE(''' || TO_CHAR(dat_holder,'MM/DD/YYYY') || ',''MM/DD/YYYY'')';
+
+            ELSIF desctab(i).col_type = 109
+            AND desctab(i).col_type_name = 'SDO_GEOMETRY'
+            THEN
+               DBMS_SQL.COLUMN_VALUE(int_cursor,i,sdo_holder);
+               int_lob_count := int_lob_count + 1;
+               
+               clb_record := clb_record || CHR(10) || 'dz_sdotxt_main.geomblob2sdo(dz_lob' 
+               || TO_CHAR(int_lob_count) || ')';
+               
+               clb_output := clb_output || dz_sdotxt_main.blob2plsql(
+                   p_input       => dz_sdotxt_main.sdo2geomblob(
+                     p_input => sdo_holder
+                   )
+                  ,p_lob_name    => 'dz_lob' || TO_CHAR(int_lob_count)
+                  ,p_delim_value => CHR(10)
+               );
+            
+            ELSIF desctab(i).col_type = 113
+            THEN
+               DBMS_SQL.COLUMN_VALUE(int_cursor,i,blb_holder);
+               int_lob_count := int_lob_count + 1;
+               
+               clb_record := clb_record || 'dz_lob' || TO_CHAR(int_lob_count);
+               
+               clb_output := clb_output || dz_sdotxt_main.blob2plsql(
+                   p_input       => blb_holder
+                  ,p_lob_name    => 'dz_lob' || TO_CHAR(int_lob_count)
+                  ,p_delim_value => CHR(10)
+               );
+               
+            END IF;
+
+            IF i < int_colcnt
+            THEN
+               clb_record := clb_record || ',';
+
+            ELSE
+               clb_record := clb_record || ');' || CHR(10);
+
+            END IF;
+
+         END LOOP;
+         
+         clb_output := clb_output || str_insert || clb_record;
+         clb_output := clb_output || 'END;' || CHR(10) || '/' || CHR(10);
+
+      END LOOP;
+
+      --------------------------------------------------------------------------
+      -- Step 50
+      -- Close the cursor
+      --------------------------------------------------------------------------
+      DBMS_SQL.CLOSE_CURSOR(int_cursor);
+      
+      --------------------------------------------------------------------------
+      -- Step 60
+      -- Return results
+      --------------------------------------------------------------------------
+      RETURN clb_output;
+   
+   END plsql_inserts;
+ 
+END;
+/
+
+--
 --*************************--
 PROMPT DZ_SDOTXT_TEST.pks;
 
@@ -2645,10 +3067,10 @@ CREATE OR REPLACE PACKAGE dz_sdotxt_test
 AUTHID DEFINER
 AS
 
-   C_TFS_CHANGESET CONSTANT NUMBER := 8430;
-   C_JENKINS_JOBNM CONSTANT VARCHAR2(255 Char) := 'BUILD-DZ_SDOTXT';
-   C_JENKINS_BUILD CONSTANT NUMBER := 9;
-   C_JENKINS_BLDID CONSTANT VARCHAR2(255 Char) := '9';
+   C_CHANGESET CONSTANT VARCHAR2(255 Char) := 'c6d7d954c3137fd1a076a3a3b49548f9d3bc1128';
+   C_JENKINS_JOBNM CONSTANT VARCHAR2(255 Char) := 'DZ_SDOTXT';
+   C_JENKINS_BUILD CONSTANT NUMBER := 6;
+   C_JENKINS_BLDID CONSTANT VARCHAR2(255 Char) := '6';
    
    C_PREREQUISITES CONSTANT MDSYS.SDO_STRING2_ARRAY := MDSYS.SDO_STRING2_ARRAY(
    );
@@ -2678,7 +3100,7 @@ END dz_sdotxt_test;
 
 GRANT EXECUTE ON dz_sdotxt_test TO PUBLIC;
 
-
+--
 --*************************--
 PROMPT DZ_SDOTXT_TEST.pkb;
 
@@ -2723,7 +3145,7 @@ AS
    RETURN VARCHAR2
    AS
    BEGIN
-      RETURN '{"TFS":' || C_TFS_CHANGESET || ','
+      RETURN '{"CHANGESET":' || C_CHANGESET || ','
       || '"JOBN":"' || C_JENKINS_JOBNM || '",'   
       || '"BUILD":' || C_JENKINS_BUILD || ','
       || '"BUILDID":"' || C_JENKINS_BLDID || '"}';
@@ -2753,10 +3175,9 @@ AS
 END dz_sdotxt_test;
 /
 
-
+--
 --*************************--
 PROMPT sqlplus_footer.sql;
-
 
 SHOW ERROR;
 
@@ -2791,4 +3212,3 @@ END;
 /
 
 EXIT;
-
