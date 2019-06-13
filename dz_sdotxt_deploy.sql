@@ -1,13 +1,9 @@
---
---*************************--
-PROMPT sqlplus_header.sql;
-
 WHENEVER SQLERROR EXIT -99;
 WHENEVER OSERROR  EXIT -98;
 SET DEFINE OFF;
---
---*************************--
-PROMPT DZ_SDOTXT_LABELED.tps;
+
+--******************************--
+PROMPT Types/DZ_SDOTXT_LABELED.tps 
 
 CREATE OR REPLACE TYPE dz_sdotxt_labeled FORCE
 AUTHID CURRENT_USER
@@ -23,9 +19,8 @@ AS OBJECT (
 
 GRANT EXECUTE ON dz_sdotxt_labeled TO public;
 
---
---*************************--
-PROMPT DZ_SDOTXT_LABELED.tpb;
+--******************************--
+PROMPT Types/DZ_SDOTXT_LABELED.tpb 
 
 CREATE OR REPLACE TYPE BODY dz_sdotxt_labeled
 AS
@@ -43,9 +38,8 @@ AS
 END;
 /
 
---
---*************************--
-PROMPT DZ_SDOTXT_LABELED_LIST.tps;
+--******************************--
+PROMPT Collections/DZ_SDOTXT_LABELED_LIST.tps 
 
 CREATE OR REPLACE TYPE dz_sdotxt_labeled_list FORCE                 
 AS 
@@ -54,9 +48,8 @@ TABLE OF dz_sdotxt_labeled;
 
 GRANT EXECUTE ON dz_sdotxt_labeled_list TO public;
 
---
---*************************--
-PROMPT DZ_SDOTXT_UTIL.pks;
+--******************************--
+PROMPT Packages/DZ_SDOTXT_UTIL.pks 
 
 CREATE OR REPLACE PACKAGE dz_sdotxt_util
 AUTHID CURRENT_USER
@@ -116,9 +109,8 @@ END dz_sdotxt_util;
 
 GRANT EXECUTE ON dz_sdotxt_util TO PUBLIC;
 
---
---*************************--
-PROMPT DZ_SDOTXT_UTIL.pkb;
+--******************************--
+PROMPT Packages/DZ_SDOTXT_UTIL.pkb 
 
 CREATE OR REPLACE PACKAGE BODY dz_sdotxt_util
 AS
@@ -757,9 +749,8 @@ AS
 END dz_sdotxt_util;
 /
 
---
---*************************--
-PROMPT DZ_SDOTXT_MAIN.pks;
+--******************************--
+PROMPT Packages/DZ_SDOTXT_MAIN.pks 
 
 CREATE OR REPLACE PACKAGE dz_sdotxt_main
 AUTHID CURRENT_USER
@@ -769,8 +760,8 @@ AS
    /*
    header: DZ_SDOTXT
      
-   - Build ID: 6
-   - Change Set: c6d7d954c3137fd1a076a3a3b49548f9d3bc1128
+   - Release: 2.0
+   - Commit Date: Sat May 27 15:59:23 2017 -0400
    
    Utilities for the conversion and inspection of Oracle Spatial objects as 
    text.
@@ -1212,9 +1203,8 @@ END dz_sdotxt_main;
 
 GRANT EXECUTE ON dz_sdotxt_main TO public;
 
---
---*************************--
-PROMPT DZ_SDOTXT_MAIN.pkb;
+--******************************--
+PROMPT Packages/DZ_SDOTXT_MAIN.pkb 
 
 CREATE OR REPLACE PACKAGE BODY dz_sdotxt_main
 AS
@@ -2654,9 +2644,8 @@ AS
 END dz_sdotxt_main;
 /
 
---
---*************************--
-PROMPT DZ_SDOTXT_DUMPER.tps;
+--******************************--
+PROMPT Types/DZ_SDOTXT_DUMPER.tps 
 
 CREATE OR REPLACE TYPE dz_sdotxt_dumper FORCE
 AUTHID CURRENT_USER
@@ -2690,9 +2679,8 @@ AS OBJECT (
 
 GRANT EXECUTE ON dz_sdotxt_dumper TO public;
 
---
---*************************--
-PROMPT DZ_SDOTXT_DUMPER.tpb;
+--******************************--
+PROMPT Types/DZ_SDOTXT_DUMPER.tpb 
 
 CREATE OR REPLACE TYPE BODY dz_sdotxt_dumper
 AS
@@ -3059,18 +3047,17 @@ AS
 END;
 /
 
---
---*************************--
-PROMPT DZ_SDOTXT_TEST.pks;
+--******************************--
+PROMPT Packages/DZ_SDOTXT_TEST.pks 
 
 CREATE OR REPLACE PACKAGE dz_sdotxt_test
 AUTHID DEFINER
 AS
 
-   C_CHANGESET CONSTANT VARCHAR2(255 Char) := 'c6d7d954c3137fd1a076a3a3b49548f9d3bc1128';
-   C_JENKINS_JOBNM CONSTANT VARCHAR2(255 Char) := 'DZ_SDOTXT';
-   C_JENKINS_BUILD CONSTANT NUMBER := 6;
-   C_JENKINS_BLDID CONSTANT VARCHAR2(255 Char) := '6';
+   C_GITRELEASE    CONSTANT VARCHAR2(255 Char) := '2.0';
+   C_GITCOMMIT     CONSTANT VARCHAR2(255 Char) := 'f362c4b0b24cf92fbc7d7b2b05ad1606d10c8d3d';
+   C_GITCOMMITDATE CONSTANT VARCHAR2(255 Char) := 'Sat May 27 15:59:23 2017 -0400';
+   C_GITCOMMITAUTH CONSTANT VARCHAR2(255 Char) := 'Paul Dziemiela';
    
    C_PREREQUISITES CONSTANT MDSYS.SDO_STRING2_ARRAY := MDSYS.SDO_STRING2_ARRAY(
    );
@@ -3100,9 +3087,8 @@ END dz_sdotxt_test;
 
 GRANT EXECUTE ON dz_sdotxt_test TO PUBLIC;
 
---
---*************************--
-PROMPT DZ_SDOTXT_TEST.pkb;
+--******************************--
+PROMPT Packages/DZ_SDOTXT_TEST.pkb 
 
 CREATE OR REPLACE PACKAGE BODY dz_sdotxt_test
 AS
@@ -3145,10 +3131,12 @@ AS
    RETURN VARCHAR2
    AS
    BEGIN
-      RETURN '{"CHANGESET":' || C_CHANGESET || ','
-      || '"JOBN":"' || C_JENKINS_JOBNM || '",'   
-      || '"BUILD":' || C_JENKINS_BUILD || ','
-      || '"BUILDID":"' || C_JENKINS_BLDID || '"}';
+      RETURN '{'
+      || ' "GITRELEASE":"'    || C_GITRELEASE    || '"'
+      || ',"GITCOMMIT":"'     || C_GITCOMMIT     || '"'
+      || ',"GITCOMMITDATE":"' || C_GITCOMMITDATE || '"'
+      || ',"GITCOMMITAUTH":"' || C_GITCOMMITAUTH || '"'
+      || '}';
       
    END version;
    
@@ -3174,10 +3162,6 @@ AS
 
 END dz_sdotxt_test;
 /
-
---
---*************************--
-PROMPT sqlplus_footer.sql;
 
 SHOW ERROR;
 
@@ -3212,3 +3196,5 @@ END;
 /
 
 EXIT;
+SET DEFINE OFF;
+

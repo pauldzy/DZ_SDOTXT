@@ -6,8 +6,8 @@ AS
    /*
    header: DZ_SDOTXT
      
-   - Build ID: DZBUILDIDDZ
-   - Change Set: DZCHANGESETDZ
+   - Release: %GITRELEASE%
+   - Commit Date: %GITCOMMITDATE%
    
    Utilities for the conversion and inspection of Oracle Spatial objects as 
    text.
