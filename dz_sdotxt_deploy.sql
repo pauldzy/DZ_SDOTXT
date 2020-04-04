@@ -761,7 +761,7 @@ AS
    header: DZ_SDOTXT
      
    - Release: 2.0
-   - Commit Date: Sat May 27 15:59:23 2017 -0400
+   - Commit Date: Sat Apr 4 11:41:39 2020 -0400
    
    Utilities for the conversion and inspection of Oracle Spatial objects as 
    text.
@@ -2800,60 +2800,75 @@ AS
             IF desctab(i).col_type IN (1,9,96)
             THEN
                DBMS_SQL.COLUMN_VALUE(int_cursor,i,str_holder);
-			   IF str_holder IS NULL
-			   THEN
-                   clb_output := clb_output || 'null';
-			   ELSE	   
-                   clb_output := clb_output || '''' || REPLACE(str_holder,'''','''''') || '''';
-			   END IF;	   
+               
+               IF str_holder IS NULL
+               THEN
+                  clb_output := clb_output || 'NULL';
+                  
+               ELSE	   
+                  clb_output := clb_output || '''' || REPLACE(str_holder,'''','''''') || '''';
+                  
+               END IF;	   
 
             ELSIF desctab(i).col_type = 2
             THEN
                DBMS_SQL.COLUMN_VALUE(int_cursor,i,num_holder);
-			   IF num_holder IS NULL
-			   THEN
-	               clb_output := clb_output || 'null';
-   		       ELSE
-                   clb_output := clb_output || TO_CHAR(num_holder);
-			   END IF;	   
+               
+               IF num_holder IS NULL
+               THEN
+                  clb_output := clb_output || 'NULL';
+                     
+               ELSE
+                  clb_output := clb_output || TO_CHAR(num_holder);
+                      
+               END IF;	   
 
             ELSIF desctab(i).col_type = 12
             THEN
                DBMS_SQL.COLUMN_VALUE(int_cursor,i,dat_holder);
-			   IF dat_holder IS NULL
-			   THEN
-                   clb_output := clb_output || 'null';
-			   ELSE 	   
-                   clb_output := clb_output || 'TO_DATE(''' || TO_CHAR(dat_holder,'MM/DD/YYYY') || ',''MM/DD/YYYY'')';
-			   END IF; 	
+               
+               IF dat_holder IS NULL
+               THEN
+                  clb_output := clb_output || 'NULL';
+
+               ELSE 	   
+                  clb_output := clb_output || 'TO_DATE(''' || TO_CHAR(dat_holder,'MM/DD/YYYY') || ',''MM/DD/YYYY'')';
+                      
+               END IF; 	
 
             ELSIF desctab(i).col_type = 109
             AND desctab(i).col_type_name = 'SDO_GEOMETRY'
             THEN
                DBMS_SQL.COLUMN_VALUE(int_cursor,i,sdo_holder);
-			   IF sdo_holder IS NULL
-			   THEN
-				   clb_output := clb_output || 'null'; 
-			   ELSE
-				   clb_output := clb_output || CHR(10) || 'dz_sdotxt_main.geomblob2sdo(' 
-				   || dz_sdotxt_main.blob2sql(
-					  dz_sdotxt_main.sdo2geomblob(
-						 p_input => sdo_holder
-					  )
-				   ) || ')' || CHR(10);
-			   END IF;	   
+
+			      IF sdo_holder IS NULL
+			      THEN
+				      clb_output := clb_output || 'NULL'; 
+			      
+			      ELSE
+                  clb_output := clb_output || CHR(10) || 'dz_sdotxt_main.geomblob2sdo(' 
+                  || dz_sdotxt_main.blob2sql(
+                     dz_sdotxt_main.sdo2geomblob(
+                        p_input => sdo_holder
+                     )
+                  ) || ')' || CHR(10);
+                  
+			      END IF;	   
             
             ELSIF desctab(i).col_type = 113
             THEN
                DBMS_SQL.COLUMN_VALUE(int_cursor,i,blb_holder);
-			   IF blb_holder IS NULL
-			   THEN
-				   clb_output := clb_output || 'null';
-			   ELSE
-				   clb_output := clb_output || dz_sdotxt_main.blob2sql(
-					  blb_holder
-				   );
-			   END IF; 	   
+               
+               IF blb_holder IS NULL
+               THEN
+                  clb_output := clb_output || 'NULL';
+                  
+               ELSE
+                  clb_output := clb_output || dz_sdotxt_main.blob2sql(
+                     p_input => blb_holder
+                  );
+                  
+               END IF; 	   
                
             END IF;
 
@@ -2995,72 +3010,88 @@ AS
             IF desctab(i).col_type IN (1,9,96)
             THEN
                DBMS_SQL.COLUMN_VALUE(int_cursor,i,str_holder);
-			   IF str_holder IS NULL
-			   THEN
-                   clb_record := clb_record || 'null';
-			   ELSE	   
-                   clb_record := clb_record || '''' || REPLACE(str_holder,'''','''''') || '''';
-			   END IF;	   
+			   
+			      IF str_holder IS NULL
+			      THEN
+                  clb_record := clb_record || 'NULL';
+			      
+			      ELSE	   
+                  clb_record := clb_record || '''' || REPLACE(str_holder,'''','''''') || '''';
+			      
+			      END IF;	   
 
             ELSIF desctab(i).col_type = 2
             THEN
                DBMS_SQL.COLUMN_VALUE(int_cursor,i,num_holder);
-			   IF num_holder IS NULL
-			   THEN
-                   clb_record := clb_record || 'null';
-			   ELSE
-                   clb_record := clb_record || TO_CHAR(num_holder);
-			   END IF;	   
+			      
+			      IF num_holder IS NULL
+			      THEN
+                  clb_record := clb_record || 'NULL';
+			      
+			      ELSE
+                  clb_record := clb_record || TO_CHAR(num_holder);
+			      
+			      END IF;	   
 
             ELSIF desctab(i).col_type = 12
             THEN
                DBMS_SQL.COLUMN_VALUE(int_cursor,i,dat_holder);
-			   IF dat_holder IS NULL
-			   THEN
-                   clb_record := clb_record || 'null';
-			   ELSE 	   
-                   clb_record := clb_record || 'TO_DATE(''' || TO_CHAR(dat_holder,'MM/DD/YYYY') || ',''MM/DD/YYYY'')';
-			   END IF; 	
+			      
+			      IF dat_holder IS NULL
+			      THEN
+                  clb_record := clb_record || 'NULL';
+			      
+			      ELSE 	   
+                  clb_record := clb_record || 'TO_DATE(''' || TO_CHAR(dat_holder,'MM/DD/YYYY') || ',''MM/DD/YYYY'')';
+			      
+			      END IF; 	
 
             ELSIF desctab(i).col_type = 109
             AND desctab(i).col_type_name = 'SDO_GEOMETRY'
             THEN
                DBMS_SQL.COLUMN_VALUE(int_cursor,i,sdo_holder);
-			   IF sdo_holder IS NULL
-			   THEN
-				   clb_record := clb_record || 'null'; 
-			   ELSE
-				   int_lob_count := int_lob_count + 1;
+			      
+			      IF sdo_holder IS NULL
+			      THEN
+				      clb_record := clb_record || 'NULL'; 
+			      
+			      ELSE
+				      int_lob_count := int_lob_count + 1;
 				   
-				   clb_record := clb_record || CHR(10) || 'dz_sdotxt_main.geomblob2sdo(dz_lob' 
-				   || TO_CHAR(int_lob_count) || ')';
+				      clb_record := clb_record || CHR(10) 
+				      || 'dz_sdotxt_main.geomblob2sdo(dz_lob' 
+				      || TO_CHAR(int_lob_count) || ')';
 				   
-				   clb_output := clb_output || dz_sdotxt_main.blob2plsql(
-					   p_input       => dz_sdotxt_main.sdo2geomblob(
-						 p_input => sdo_holder
-					   )
-					  ,p_lob_name    => 'dz_lob' || TO_CHAR(int_lob_count)
-					  ,p_delim_value => CHR(10)
-				   );
-			   END IF;	   
+				      clb_output := clb_output || dz_sdotxt_main.blob2plsql(
+					       p_input       => dz_sdotxt_main.sdo2geomblob(
+						      p_input => sdo_holder
+					       )
+					      ,p_lob_name    => 'dz_lob' || TO_CHAR(int_lob_count)
+					      ,p_delim_value => CHR(10)
+				      );
+				      
+			      END IF;	   
             
             ELSIF desctab(i).col_type = 113
             THEN
                DBMS_SQL.COLUMN_VALUE(int_cursor,i,blb_holder);
-			   IF blb_holder IS NULL
-			   THEN
-				   clb_record := clb_record || 'null';
-			   ELSE
-				   int_lob_count := int_lob_count + 1;
+			   
+			      IF blb_holder IS NULL
+			      THEN
+				      clb_record := clb_record || 'NULL';
+			      
+			      ELSE
+				      int_lob_count := int_lob_count + 1;
 				   
-				   clb_record := clb_record || 'dz_lob' || TO_CHAR(int_lob_count);
+				      clb_record := clb_record || 'dz_lob' || TO_CHAR(int_lob_count);
 				   
-				   clb_output := clb_output || dz_sdotxt_main.blob2plsql(
-					   p_input       => blb_holder
-					  ,p_lob_name    => 'dz_lob' || TO_CHAR(int_lob_count)
-					  ,p_delim_value => CHR(10)
-				   );
-			   END IF; 	   
+                  clb_output := clb_output || dz_sdotxt_main.blob2plsql(
+                     p_input       => blb_holder
+                    ,p_lob_name    => 'dz_lob' || TO_CHAR(int_lob_count)
+                    ,p_delim_value => CHR(10)
+                  );
+                  
+			      END IF; 	   
                
             END IF;
 
@@ -3105,8 +3136,8 @@ AUTHID DEFINER
 AS
 
    C_GITRELEASE    CONSTANT VARCHAR2(255 Char) := '2.0';
-   C_GITCOMMIT     CONSTANT VARCHAR2(255 Char) := 'f362c4b0b24cf92fbc7d7b2b05ad1606d10c8d3d';
-   C_GITCOMMITDATE CONSTANT VARCHAR2(255 Char) := 'Sat May 27 15:59:23 2017 -0400';
+   C_GITCOMMIT     CONSTANT VARCHAR2(255 Char) := '9203cd5f4f4963836bc3f66cd8033e220042daf6';
+   C_GITCOMMITDATE CONSTANT VARCHAR2(255 Char) := 'Sat Apr 4 11:41:39 2020 -0400';
    C_GITCOMMITAUTH CONSTANT VARCHAR2(255 Char) := 'Paul Dziemiela';
    
    C_PREREQUISITES CONSTANT MDSYS.SDO_STRING2_ARRAY := MDSYS.SDO_STRING2_ARRAY(
@@ -3247,3 +3278,4 @@ END;
 
 EXIT;
 SET DEFINE OFF;
+
